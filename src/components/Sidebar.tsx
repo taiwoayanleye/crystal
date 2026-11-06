@@ -16,7 +16,7 @@ export function Sidebar({
   activeDatasetId,
 }: SidebarProps) {
   return (
-    <aside className="w-60 flex-shrink-0 bg-bg-subtle border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
+    <aside className="hidden md:flex md:w-60 flex-shrink-0 bg-white border-r border-border p-4 flex-col gap-6 overflow-y-auto">
       <div className="flex items-center gap-2">
         <span className="text-xl">📊</span>
         <span className="text-small font-medium text-text-dark">Dashboard</span>
@@ -62,7 +62,7 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-border pt-4 text-small text-text-light">
-        <p>Multi-source connectors arrive in Phase 2.</p>
+        <p>CSV and PostgreSQL sources are available.</p>
       </div>
     </aside>
   )

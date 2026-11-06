@@ -18,6 +18,9 @@ interface Dataset {
   outcomeScore: number
   hypothesis: string
   status: string
+  sourceType: 'csv' | 'postgres'
+  rowCount: number
+  lastSyncAt: string
 }
 
 function PortfolioSummary({ datasets }: { datasets: Dataset[] }) {
@@ -26,37 +29,33 @@ function PortfolioSummary({ datasets }: { datasets: Dataset[] }) {
   const average = (values: number[]) =>
     Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
   const averageQuality = average(datasets.map((dataset) => dataset.qualityScore))
-  const averageOutcome = average(datasets.map((dataset) => dataset.outcomeScore))
-  // Health balances measured/heuristic data quality with user-entered outcome progress.
-  const portfolioHealth = Math.round((averageQuality + averageOutcome) / 2)
   const trackedOutcomes = datasets.filter((dataset) => dataset.status !== 'Not started').length
   const needsAttention = datasets.filter(
-    (dataset) => dataset.qualityScore < 70 || dataset.outcomeScore < 30
+    (dataset) => dataset.qualityScore < 70 || (dataset.status !== 'Not started' && dataset.outcomeScore < 30)
   ).length
 
   const items = [
-    {
-      label: 'Health',
-      value: `${portfolioHealth}%`,
-      icon: '◉',
-      tone: 'success',
-      hint: 'Portfolio health averages quality and user-entered outcome scores',
-    },
-    { label: 'Products', value: String(datasets.length), icon: '▤', tone: 'primary' },
+    { label: 'Data products', value: String(datasets.length), icon: '▤', tone: 'primary' },
     { label: 'Avg. quality', value: `${averageQuality}%`, icon: '✓', tone: 'success' },
     {
-      label: 'Tracked',
+      label: 'Outcomes tracked',
       value: `${trackedOutcomes}/${datasets.length}`,
       icon: '↗',
       tone: 'navy',
       hint: 'Products with an outcome status beyond Not started',
     },
     {
-      label: 'At risk',
+      label: 'Needs review',
       value: String(needsAttention),
       icon: '!',
       tone: needsAttention ? 'warning' : 'success',
-      hint: 'Quality below 70% or outcome score below 30',
+      hint: 'Quality below 70% or a tracked outcome score below 30',
+    },
+    {
+      label: 'Sources',
+      value: `${datasets.filter((dataset) => dataset.sourceType === 'csv').length} CSV · ${datasets.filter((dataset) => dataset.sourceType === 'postgres').length} Postgres`,
+      icon: '↔',
+      tone: 'navy',
     },
   ] as const
 
@@ -69,14 +68,14 @@ function PortfolioSummary({ datasets }: { datasets: Dataset[] }) {
 
   return (
     <section
-      aria-label="Portfolio health summary"
-      className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+      aria-label="Portfolio summary"
+      className="grid grid-cols-2 gap-3 mb-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5"
     >
       {items.map((item) => (
         <div
           key={item.label}
           title={'hint' in item ? item.hint : undefined}
-          className="min-w-0 flex items-center gap-2 rounded-lg border border-border bg-white p-3 sm:gap-3 sm:px-4 shadow-sm"
+          className="min-w-0 flex items-center gap-3 rounded-lg border border-border bg-white p-4 shadow-sm"
         >
           <span
             aria-hidden="true"
@@ -180,19 +179,18 @@ export default function Dashboard() {
           activeDatasetId={chatDatasetId}
         />
 
-        <div className="flex-1 overflow-y-auto p-8 bg-white">
+        <div className="flex-1 overflow-y-auto bg-bg-subtle p-4 sm:p-6 lg:p-8">
           <div className="max-w-[1200px] mx-auto">
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="text-page-title text-navy">
-                  Data Products ({datasets.length})
-                </h1>
-                <p className="text-small text-text-light mt-1">
-                  Measure whether each dataset creates real business value.
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-light mb-2">Portfolio</p>
+                <h1 className="text-page-title text-navy">Data products</h1>
+                <p className="text-small text-text-light mt-2 max-w-xl">
+                  Quality signals, intended outcomes, and source coverage across your data products.
                 </p>
               </div>
-              <Button variant="primary" onClick={() => setIsUploadModalOpen(true)}>
-                + Add Dataset
+              <Button variant="primary" onClick={() => setIsUploadModalOpen(true)} className="self-start sm:self-auto">
+                <span aria-hidden="true" className="mr-2">+</span>Add data product
               </Button>
             </div>
 
@@ -227,12 +225,15 @@ export default function Dashboard() {
             )}
 
             {!loading && datasets.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-5">
                 {datasets.map((dataset) => (
                   <MetricCard
                     key={dataset.id}
                     icon={dataset.icon}
                     title={dataset.title}
+                    sourceType={dataset.sourceType}
+                    rowCount={dataset.rowCount}
+                    lastSyncAt={dataset.lastSyncAt}
                     qualityScore={dataset.qualityScore}
                     usageScore={dataset.usageScore}
                     outcomeScore={dataset.outcomeScore}

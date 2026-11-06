@@ -206,22 +206,29 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   )
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={close}>
+    <div className="fixed inset-0 bg-navy/40 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6" onClick={close}>
       <div
-        className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upload-modal-title"
+        className="bg-white rounded-lg shadow-lg max-w-xl w-full max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-section-title text-navy font-semibold">Add New Dataset</h2>
-          <button onClick={close} className="text-text-light hover:text-text-dark text-xl leading-none">
+        <div className="sticky top-0 z-10 flex justify-between items-center border-b border-border bg-white px-5 py-4 sm:px-6">
+          <div>
+            <h2 id="upload-modal-title" className="text-section-title text-navy font-semibold">Add a data product</h2>
+            <p className="text-small text-text-light mt-1">Connect a source and describe the value it should create.</p>
+          </div>
+          <button onClick={close} aria-label="Close dialog" className="w-9 h-9 rounded-md text-text-light hover:bg-bg-subtle hover:text-text-dark text-xl leading-none">
             ×
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5 px-5 py-5 sm:px-6">
           <div>
-            <label className="text-small text-text-dark font-medium block mb-2">Data source</label>
+            <label htmlFor="source-type" className="text-small text-text-dark font-medium block mb-2">Data source</label>
             <select
+              id="source-type"
               value={sourceType}
               onChange={(e) => {
                 setSourceType(e.target.value as SourceType)
@@ -356,12 +363,13 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
           )}
 
           <div>
-            <label className="text-small text-text-dark font-medium block mb-2">Dataset name</label>
+            <label htmlFor="dataset-name" className="text-small text-text-dark font-medium block mb-2">Dataset name</label>
             <div className="flex gap-2">
               <div className="w-11 flex-shrink-0 flex items-center justify-center border border-border rounded-md text-xl" title="Icon">
                 {icon || '📄'}
               </div>
               <input
+                id="dataset-name"
                 type="text"
                 value={name}
                 onChange={(e) => {
@@ -375,10 +383,11 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
           </div>
 
           <div>
-            <label className="text-small text-text-dark font-medium block mb-2">
+            <label htmlFor="dataset-problem" className="text-small text-text-dark font-medium block mb-2">
               What problem does this data solve?
             </label>
             <input
+              id="dataset-problem"
               type="text"
               value={problemStatement}
               onChange={(e) => setProblemStatement(e.target.value)}
@@ -388,8 +397,9 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
           </div>
 
           <div>
-            <label className="text-small text-text-dark font-medium block mb-2">Who uses this data?</label>
+            <label htmlFor="dataset-users" className="text-small text-text-dark font-medium block mb-2">Who uses this data?</label>
             <input
+              id="dataset-users"
               type="text"
               value={users}
               onChange={(e) => setUsers(e.target.value)}
@@ -445,7 +455,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
           {error && <p className="text-small text-error">{error}</p>}
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="sticky bottom-0 flex gap-3 border-t border-border bg-white px-5 py-4 sm:px-6">
           <Button variant="secondary" onClick={close} className="flex-1" disabled={submitting}>
             Cancel
           </Button>

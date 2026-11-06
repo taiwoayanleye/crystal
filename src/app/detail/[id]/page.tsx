@@ -77,7 +77,7 @@ function QualityRow({
   const textColor =
     color === 'success' ? 'text-success' : color === 'warning' ? 'text-warning' : 'text-error'
   return (
-    <div className="bg-white border border-border rounded-lg p-4">
+    <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
       <div className="flex justify-between items-center mb-2">
         <span className="text-small text-text-dark font-medium">{label}</span>
         <span className={`font-mono text-metric ${textColor}`}>{value}%</span>
@@ -202,11 +202,11 @@ export default function ProductDetail() {
   const { quality, usage, outcome } = data.metrics
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-bg-subtle">
       <Header />
 
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <button
@@ -215,16 +215,23 @@ export default function ProductDetail() {
             >
               ← Back to dashboard
             </button>
-            <h1 className="text-page-title text-navy mb-2">
-              <span className="mr-2">{data.icon}</span>
-              {data.name}
-            </h1>
-            <p className="text-body text-text-light">{data.problemStatement}</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-page-title text-navy mb-2 flex items-center gap-3">
+                  <span className="w-11 h-11 flex items-center justify-center rounded-lg bg-white border border-border text-2xl flex-shrink-0">{data.icon}</span>
+                  <span className="break-words">{data.name}</span>
+                </h1>
+                <p className="text-body text-text-light max-w-3xl">{data.problemStatement}</p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-white border border-border text-small text-text-dark self-start">
+                {data.sourceType === 'postgres' ? 'PostgreSQL snapshot' : 'CSV snapshot'}
+              </span>
+            </div>
           </div>
 
           {/* Metadata */}
-          <div className="bg-bg-subtle rounded-lg p-6 mb-8 border border-border">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-white rounded-lg p-5 sm:p-6 mb-10 border border-border shadow-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
               <div>
                 <p className="text-small text-text-light mb-1">Owner</p>
                 <p className="text-body text-text-dark font-medium">{data.users}</p>
@@ -257,12 +264,15 @@ export default function ProductDetail() {
           </div>
 
           {/* Quality Metrics */}
-          <div className="mb-8">
-            <h2 className="text-section-title text-navy mb-6">Quality Metrics</h2>
+          <div className="mb-10">
+            <div className="mb-5">
+              <h2 className="text-section-title text-navy">Quality signals</h2>
+              <p className="text-small text-text-light mt-1">Completeness comes from the stored sample. Freshness and accuracy are heuristic estimates.</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <QualityRow label="Freshness" value={quality.freshness} note="Time since last refresh" />
-              <QualityRow label="Completeness" value={quality.completeness} note="Non-empty values" />
-              <QualityRow label="Accuracy" value={quality.accuracy} note="Inferred from patterns" />
+              <QualityRow label="Freshness estimate" value={quality.freshness} note="Heuristic snapshot score; not a source SLA." />
+              <QualityRow label="Completeness" value={quality.completeness} note="Share of sampled cells with a value." />
+              <QualityRow label="Accuracy estimate" value={quality.accuracy} note="Pattern-based estimate; not independently verified." />
             </div>
           </div>
 
@@ -425,12 +435,14 @@ export default function ProductDetail() {
                 )}
                 <div>
                   <p className="text-small text-text-light mb-2">
-                    Outcome Score — {outcome.outcomeScore}/100
+                    Outcome Score — {outcome.status === 'Not started' ? 'Not scored' : `${outcome.outcomeScore}/100`}
                   </p>
-                  <ProgressBar
-                    value={outcome.outcomeScore}
-                    color={outcome.outcomeScore > 50 ? 'success' : 'warning'}
-                  />
+                  {outcome.status !== 'Not started' && (
+                    <ProgressBar
+                      value={outcome.outcomeScore}
+                      color={outcome.outcomeScore > 50 ? 'success' : 'warning'}
+                    />
+                  )}
                 </div>
               </div>
             ) : (

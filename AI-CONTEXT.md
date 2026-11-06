@@ -14,14 +14,15 @@ Crystal is an implemented, deployed Next.js 14 (App Router) data-as-a-product da
 - **Repo:** https://github.com/taiwoayanleye/crystal (public, git-connected to Vercel — pushes to `main` auto-deploy).
 - **Env:** `DATABASE_URL` (Neon, via Vercel Marketplace) and `ANTHROPIC_API_KEY` are set in Vercel for Production/Preview/Development and pulled locally.
 
-## In progress (uncommitted or just-committed in this change)
+## In progress (uncommitted)
 
-TAI-25 and the requested TAI-26 follow-on are implemented in the current working tree, not yet committed or deployed:
+End-to-end UI critique and refinements are in the current working tree:
 
-- CSV upload now uses `CsvConnector` from the shared connector factory; CSV and PostgreSQL results share one `saveIngestResult` path and the same quality-metric calculation over the capped sample.
-- Dataset source type and last successful snapshot time are normalized on the dataset record. `last_sync_at` is an additive migration; existing rows are backfilled from `created_at`. Dataset detail displays source and last-synced time.
-- Usage counters and outcome records remain source-agnostic. Usage/trend display values remain illustrative and outcome values remain user-owned, consistent with existing product semantics.
-- `npm run build` passes. No test suite was run. `design/crystal.pen` has a separate pre-existing working-tree modification and was left untouched.
+- Dashboard summary uses explicit product, quality, outcome-tracking, review, and source counts instead of a composite “health” score whose formula mixed quality with user-entered outcomes.
+- Dataset cards label assistant-derived activity as illustrative and show outcomes as “Not started” rather than plotting a zero score.
+- Detail page gives quality estimates their heuristic context; lineage now shows the observed source → ingestion → profile → product flow and intended audience, without inventing downstream dashboards or freshness states.
+- Dashboard, detail, and assistant layouts are more responsive; the upload dialog has a clearer hierarchy, modal semantics, and associated labels; keyboard focus is visible globally.
+- Local `npx tsc --noEmit` passes. Browser review succeeded after restarting duplicate Next.js dev servers: concurrent servers shared `.next`, leaving HTML references to missing client bundles and preventing hydration. One clean server now runs at `http://localhost:3000`. The pre-existing `design/crystal.pen` modification was preserved and not edited.
 
 The AI-assisted upload flow — previously flagged here as "inferred from the diff, needs validation" — is now **implemented and validated**, and extended with AI name/emoji suggestion:
 
@@ -34,6 +35,8 @@ The AI-assisted upload flow — previously flagged here as "inferred from the di
 Historical validation when the AI upload flow was introduced: `npx tsc --noEmit` clean; `npx vitest run` = 20 passing; `npx next build` compiled; `/api/analyze`, `/api/connect`, `/api/datasets*`, `/api/chat` exercised locally. The AI upload change was committed as `4f4753a`.
 
 ## Recently completed (committed)
+
+- `4bba12c`: unified CSV and PostgreSQL ingestion; added CSV connector, common persistence path, normalized source metadata, and last-sync timestamps. `npm test` passed (20 tests) and the production build passed before the commit; pushed to `main`.
 
 - Dashboard portfolio summary strip added to `src/app/page.tsx`, following the five-metric design rhythm while using portfolio values supported by current data (health, product count, average quality, outcome tracking, and at-risk count). Health averages quality and user-entered outcome scores; no illustrative usage telemetry is presented as live. Visual review in the local browser confirmed the strip fits in five columns at desktop width and uses compact, consistent spacing/type. Automated tests were not run.
 
@@ -86,7 +89,7 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 ## Outstanding work
 
 - Enable "Autofill with AI" for **PostgreSQL** sources (needs a sample fetched after connecting; currently CSV-only — AI button hidden for Postgres).
-- Review the TAI-25/TAI-26 implementation against Linear acceptance details, then commit/deploy if desired. Real usage/trend telemetry remains outstanding; current usage/trend values are illustrative and outcome tracking remains manual.
+- Review the TAI-25/TAI-26 implementation against Linear acceptance details. Real usage/trend telemetry remains outstanding; current usage/trend values are illustrative and outcome tracking remains manual.
 - Replace illustrative usage/trend with real signals (wire usage to actual query activity; derive freshness from upload time).
 - Phase 2 remaining connectors: Snowflake (TAI-22), BigQuery (TAI-23), cloud storage (TAI-27), plus backlog connectors and features.
 - Add integration/API tests + CI; confirm model id and env config in all environments.
@@ -95,4 +98,4 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Next recommended step
 
-Review the source-agnostic ingestion and last-sync behavior, then decide whether to add real usage telemetry before proceeding with another source connector.
+Update the pen.dev source screens to match the revised product semantics. Keep outcome tracking manual and usage illustrative until real event sources exist.

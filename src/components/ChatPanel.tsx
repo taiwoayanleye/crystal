@@ -90,7 +90,7 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
   const showSuggestions = messages.length === 1 && !loading
 
   return (
-    <div className="w-[350px] flex-shrink-0 bg-white border-l border-border flex flex-col">
+    <section aria-label="Data assistant" className="fixed inset-x-0 bottom-0 z-40 h-[min(78vh,680px)] bg-white border border-border shadow-lg rounded-t-xl flex flex-col md:static md:inset-auto md:z-auto md:h-auto md:w-[380px] md:flex-shrink-0 md:rounded-none md:border-y-0 md:border-r-0 md:border-l md:shadow-none">
       <div className="border-b border-border p-4 flex justify-between items-center">
         <div className="min-w-0">
           <h2 className="text-section-title text-navy font-semibold">Data Assistant</h2>
@@ -163,7 +163,8 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send(input)}
-            placeholder="Ask Claude about this data..."
+            aria-label="Ask about this dataset"
+            placeholder="Ask about this dataset…"
             className="flex-1 px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary"
             disabled={loading}
           />
@@ -177,6 +178,6 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
           </button>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

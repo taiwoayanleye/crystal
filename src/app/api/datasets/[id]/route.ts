@@ -34,15 +34,9 @@ export async function GET(
         ? 'stale'
         : 'error'
 
-    const applications = Array.from(
-      new Set(
-        dataset.users
-          .split(/[,/]/)
-          .map((u) => `${u.trim()} Dashboard`)
-          .filter((u) => u.length > 12)
-      )
+    const intendedUsers = Array.from(
+      new Set(dataset.users.split(/[,/]/).map((user) => user.trim()).filter(Boolean))
     )
-    if (applications.length === 0) applications.push('Analytics Dashboard')
 
     // Lineage built from the dataset's real source + shape (no fabricated size).
     const isPg = dataset.sourceType === 'postgres'
@@ -87,8 +81,8 @@ export async function GET(
           status: freshnessStatus,
         },
         usage: {
-          name: 'Used By',
-          applications,
+          name: 'Intended audience',
+          applications: intendedUsers.length ? intendedUsers : ['Not specified'],
           status: 'fresh' as const,
         },
       },

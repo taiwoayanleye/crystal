@@ -18,12 +18,12 @@ export function Header() {
           <a href="/" className="text-small text-text-light hover:text-text-dark transition-smooth">
             Dashboard
           </a>
-          <button
-            title="Taiwo Ayanleye"
-            className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-small font-bold hover:opacity-90 transition-smooth"
+          <span
+            aria-label="Signed in as Taiwo Ayanleye"
+            className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-small font-bold"
           >
             T
-          </button>
+          </span>
         </div>
       </div>
     </header>
