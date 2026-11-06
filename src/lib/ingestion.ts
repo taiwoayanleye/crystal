@@ -12,7 +12,7 @@ export async function saveIngestResult(input: {
   successMetrics?: string[]
 }): Promise<{ datasetId: string }> {
   const { result } = input
-  const quality = calculateQualityMetrics(result.rows, result.schema)
+  const quality = calculateQualityMetrics(result.rows, result.schema, result.lastSyncAt)
   const datasetId = await saveDataset({
     name: input.name?.trim() || result.name,
     icon: input.icon,

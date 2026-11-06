@@ -1,6 +1,34 @@
 import { QualityMetrics } from './types'
 
 /**
+ * UNIVERSAL METRIC CALCULATION (TAI-26)
+ *
+ * This module provides source-agnostic quality, usage, and trend metrics
+ * that work for any data source (CSV, PostgreSQL, Snowflake, BigQuery, S3/GCS, etc.).
+ *
+ * All metrics are calculated from the standard `IngestResult` interface:
+ * - quality: freshness, completeness, accuracy (derived from sample + lastSyncAt)
+ * - usage: deterministic seeded values (illustrative until real telemetry)
+ * - trend: 30-day view of usage growth (deterministic seeded)
+ *
+ * NEW CONNECTOR DEVELOPERS:
+ * 1. Implement IDataConnector interface (types.ts)
+ * 2. Your ingest() method returns IngestResult with:
+ *    - name: dataset name
+ *    - schema: ordered column names (string[])
+ *    - rows: sample of data objects (Record<string, any>[])
+ *    - rowCount: total rows in source
+ *    - lastSyncAt: ISO timestamp of snapshot
+ * 3. Quality metrics are auto-calculated via saveIngestResult()
+ *    - freshness: based on lastSyncAt recency
+ *    - completeness: % non-null cells in sample
+ *    - accuracy: type consistency + outlier checks
+ * 4. Usage/trend are auto-seeded from the dataset ID
+ *
+ * No source-specific code needed beyond returning IngestResult.
+ */
+
+/**
  * Deterministic pseudo-random generator seeded from a string.
  * Ensures a given dataset always produces the same "sample" usage/trend
  * numbers, so the dashboard and detail view stay consistent across reloads.
@@ -26,19 +54,24 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * Calculate quality metrics for a dataset
- * Quality = average of freshness, completeness, accuracy
+ * Calculate quality metrics for a dataset.
+ * Quality = average of freshness, completeness, accuracy.
+ *
+ * All metrics are source-agnostic and work with any IngestResult:
+ * - Freshness: recency of the last sync (uses lastSyncAt timestamp)
+ * - Completeness: % of non-null cells in the sample
+ * - Accuracy: heuristic consistency checks (type consistency, outlier detection)
  */
 export function calculateQualityMetrics(
   data: Record<string, any>[],
-  schema: string[]
+  schema: string[],
+  lastSyncAt?: string
 ): QualityMetrics {
   if (data.length === 0) {
     return { freshness: 0, completeness: 0, accuracy: 0 }
   }
 
-  // Freshness: fresh on upload
-  const freshness = 95
+  const freshness = calculateFreshness(lastSyncAt)
   const completeness = calculateCompleteness(data, schema)
   const accuracy = calculateAccuracy(data, schema)
 
@@ -47,6 +80,29 @@ export function calculateQualityMetrics(
     completeness: Math.round(completeness),
     accuracy: Math.round(accuracy),
   }
+}
+
+/**
+ * Calculate freshness: how recent the last sync is.
+ * Heuristic score based on time elapsed since lastSyncAt.
+ * - < 1 hour: 95-100%
+ * - < 1 day: 80-95%
+ * - < 1 week: 60-80%
+ * - < 1 month: 40-60%
+ * - >= 1 month: 0-40%
+ */
+function calculateFreshness(lastSyncAt?: string): number {
+  if (!lastSyncAt) return 0
+
+  const syncTime = new Date(lastSyncAt)
+  const now = new Date()
+  const hoursSinceSync = (now.getTime() - syncTime.getTime()) / (1000 * 60 * 60)
+
+  if (hoursSinceSync < 1) return 95
+  if (hoursSinceSync < 24) return Math.max(80, 95 - hoursSinceSync)
+  if (hoursSinceSync < 7 * 24) return Math.max(60, 80 - hoursSinceSync / 4)
+  if (hoursSinceSync < 30 * 24) return Math.max(40, 60 - hoursSinceSync / 12)
+  return Math.max(0, 40 - hoursSinceSync / 72)
 }
 
 /**
