@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-06 by Codex._
+_Last updated: 2026-11-06 by Claude Code (design review of `design/crystal.pen`; prior entry by Codex)._
 
 ## Current project status
 
@@ -14,10 +14,24 @@ Crystal is an implemented, deployed Next.js 14 (App Router) data-as-a-product da
 - **Repo:** https://github.com/taiwoayanleye/crystal (public, git-connected to Vercel — pushes to `main` auto-deploy).
 - **Env:** `DATABASE_URL` (Neon, via Vercel Marketplace) and `ANTHROPIC_API_KEY` are set in Vercel for Production/Preview/Development and pulled locally.
 
-## In progress
+## Completed — `design/crystal.pen` V2 semantic alignment (2026-11-06)
 
-- The visual design source `design/crystal.pen` has a pre-existing uncommitted modification. It was preserved and not edited during the code refinements; inspect its diff before changing or reverting it.
-- One clean local Next.js dev server is running at `http://localhost:3000`. Two duplicate servers previously shared `.next`, causing stale references to missing browser bundles; both were stopped and the server was restarted. Dashboard and detail pages were then confirmed rendering in the integrated browser.
+The uncommitted `design/crystal.pen` modification is a full **"V2" redesign**: top-level frames `PvWu6` Homepage, `nEmo8` Dashboard V2, `JyQE0` Detail V2, `kFhfe` Data Lineage V2, `Hqq4n` Upload Modal V2, `V7xjvu` Chat Panel V2, `tPm9N` Components; V2 components `kNzDk` ProgressBar, `WVfpO`/`LZDfw`/`aptDT` Buttons, `GSxG1` MetricCard. **Preserve it — do not revert.** (Inspect with the pencil `execute` tool; `Get('<id>')` returns the subtree, and a `throw new Error(JSON.stringify(...))` is the read channel. `Update('<id>', {content:'...'})` edits a node.)
+
+Updated the V2 designs to match the implemented product and preserve the distinction between observed data and illustrative/demo information:
+
+- **Data Lineage V2 (`kFhfe`)** — changed to observed-only: `Data flow` → Source → Ingestion → Profile → Data product. Source reports CSV upload, 7,043 rows, and 21 columns; ingestion reports CSV connector, on-upload trigger, and 500-row stored sample; profile reports 500 sampled rows and a 21-column schema; data product shows its name, estimated quality, and row count. Removed unverified source infrastructure, runtime/schedule/duration claims, stage-status badges, downstream consumer cards, and freshness legend. Replaced the consumer section with the intended Sales audience and an explicit not-connected label.
+- **MetricCard V2 (`GSxG1`)** — changed `Usage` to `Demo activity index` and removed the unsupported `HEALTHY` composite-health badge.
+- **Upload Modal V2 (`Hqq4n`)** — added `Define Success Metrics (optional)`, the three default metric options, and an `AI-suggested for this data` affordance with sample churn/retention suggestions. Resized and tightened the modal so fields and footer fit without clipping.
+- **Dashboard V2 (`nEmo8`)** — added the missing `Needs review` KPI and aligned all card activity labels to `Demo activity index`.
+- **Detail V2 (`JyQE0`)** and **Chat Panel V2 (`V7xjvu`)** remain aligned with the current implemented semantics.
+
+Validation: inspected Pencil screenshots for `kFhfe`, `GSxG1`, `Hqq4n`, and `nEmo8`; Pencil layout diagnostics reported no clipped or overflowing nodes in these frames after adjustment. No code tests were run because this was a design-file-only change. The design changes and this handoff are being committed together as Taiwo Ayanleye, with no AI/co-author trailer.
+
+## Resolved local browser issue
+
+- Two Next.js dev servers had been writing to the same `.next` directory, leaving stale client bundle references and a permanently loading browser UI. Both were stopped and a single dev server was restarted at `http://localhost:3000`; dashboard and detail pages then rendered successfully. Avoid running multiple dev servers for this checkout at once.
+- The user's uncommitted V2 redesign in `design/crystal.pen` was explicitly preserved and continued via Pencil execute; unrelated V2 content was left intact.
 
 The AI-assisted upload flow — previously flagged here as "inferred from the diff, needs validation" — is now **implemented and validated**, and extended with AI name/emoji suggestion:
 
@@ -69,7 +83,7 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 - Neon client is **lazy** (init on first query, safe for `next build`) and uses **`fetch` `cache: 'no-store'`** to avoid stale reads after writes. List/detail reads select explicit columns and **exclude the heavy `rows` JSONB** (an oversized `SELECT *` silently dropped rows over Neon's HTTP driver).
 - Source ingestion goes through a connector abstraction (`src/lib/connectors/`): `IDataConnector` + `IngestResult`. PostgreSQL is **snapshot-at-connect**; credentials are used once and **never stored**.
 - CSV and PostgreSQL now share a connector factory and dataset persistence/quality-calculation path. Quality is calculated from the connector's capped sample; `last_sync_at` records snapshot completion separately from general `updated_at` edits.
-- The detail page separates **real, data-derived** signals (quality, column profile, lineage, outcome) from **illustrative** ones (usage, 30-day trend), which are labeled as such.
+- The detail page separates source/sample-derived data (schema, sample profile, last-sync timestamp) from heuristic quality estimates, illustrative usage/trend, and user-owned outcomes; each is labeled according to its evidence source.
 - **Outcome** is a user-owned, editable record (PATCH `/api/datasets/[id]`), not an auto-inferred business result. Fresh uploads start "Not started / 0".
 - AI runs **server-side** via Anthropic Messages API (`claude-opus-5-5`); keys stay in env vars. AI now powers chat, success-metric suggestions, and dataset name/emoji/problem/users autofill.
 - Schema evolves via idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in the bootstrap path (runs once per process).
@@ -94,4 +108,8 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Next recommended step
 
-Review the pre-existing `design/crystal.pen` diff, then update its screens to match the current UI semantics: explicit portfolio measures, heuristic quality estimates, illustrative usage, user-entered outcome tracking, and observed-only lineage. Keep outcome tracking manual and usage illustrative until real event sources exist.
+Cross-check the remaining V2 screens (`PvWu6`, `JyQE0`, `V7xjvu`) against current product behavior and decide whether to implement or document any remaining gaps. Keep outcome tracking manual and usage/activity illustrative until real event sources exist.
+
+### Separately (product backlog, not the design task)
+
+Enable "Autofill with AI" for PostgreSQL sources; migrate remaining Phase 2 connectors (Snowflake TAI-22, BigQuery TAI-23, cloud storage TAI-27); replace illustrative usage/trend with real signals; add integration tests + CI.
