@@ -20,6 +20,80 @@ interface Dataset {
   status: string
 }
 
+function PortfolioSummary({ datasets }: { datasets: Dataset[] }) {
+  if (datasets.length === 0) return null
+
+  const average = (values: number[]) =>
+    Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+  const averageQuality = average(datasets.map((dataset) => dataset.qualityScore))
+  const averageOutcome = average(datasets.map((dataset) => dataset.outcomeScore))
+  // Health balances measured/heuristic data quality with user-entered outcome progress.
+  const portfolioHealth = Math.round((averageQuality + averageOutcome) / 2)
+  const trackedOutcomes = datasets.filter((dataset) => dataset.status !== 'Not started').length
+  const needsAttention = datasets.filter(
+    (dataset) => dataset.qualityScore < 70 || dataset.outcomeScore < 30
+  ).length
+
+  const items = [
+    {
+      label: 'Health',
+      value: `${portfolioHealth}%`,
+      icon: '◉',
+      tone: 'success',
+      hint: 'Portfolio health averages quality and user-entered outcome scores',
+    },
+    { label: 'Products', value: String(datasets.length), icon: '▤', tone: 'primary' },
+    { label: 'Avg. quality', value: `${averageQuality}%`, icon: '✓', tone: 'success' },
+    {
+      label: 'Tracked',
+      value: `${trackedOutcomes}/${datasets.length}`,
+      icon: '↗',
+      tone: 'navy',
+      hint: 'Products with an outcome status beyond Not started',
+    },
+    {
+      label: 'At risk',
+      value: String(needsAttention),
+      icon: '!',
+      tone: needsAttention ? 'warning' : 'success',
+      hint: 'Quality below 70% or outcome score below 30',
+    },
+  ] as const
+
+  const toneClasses = {
+    success: 'bg-success/10 text-success',
+    primary: 'bg-primary/10 text-primary',
+    navy: 'bg-navy/10 text-navy',
+    warning: 'bg-warning/10 text-warning',
+  }
+
+  return (
+    <section
+      aria-label="Portfolio health summary"
+      className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5"
+    >
+      {items.map((item) => (
+        <div
+          key={item.label}
+          title={'hint' in item ? item.hint : undefined}
+          className="min-w-0 flex items-center gap-2 rounded-lg border border-border bg-white p-3 sm:gap-3 sm:px-4 shadow-sm"
+        >
+          <span
+            aria-hidden="true"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-base font-semibold ${toneClasses[item.tone]}`}
+          >
+            {item.icon}
+          </span>
+          <div className="min-w-0">
+            <p className="text-lg font-semibold leading-6 tracking-tight text-navy tabular-nums">{item.value}</p>
+            <p className="truncate text-xs leading-4 text-text-light">{item.label}</p>
+          </div>
+        </div>
+      ))}
+    </section>
+  )
+}
+
 export default function Dashboard() {
   const router = useRouter()
   const [datasets, setDatasets] = useState<Dataset[]>([])
@@ -136,6 +210,8 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+
+            {!loading && datasets.length > 0 && <PortfolioSummary datasets={datasets} />}
 
             {!loading && datasets.length === 0 && (
               <div className="flex items-center justify-center h-64">

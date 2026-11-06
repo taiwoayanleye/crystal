@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-06 by Claude Code._
+_Last updated: 2026-11-06 by Codex._
 
 ## Current project status
 
@@ -27,6 +27,8 @@ The AI-assisted upload flow — previously flagged here as "inferred from the di
 Validation run this session: `npx tsc --noEmit` clean; `npx vitest run` = 20 passing; `npx next build` compiles; `/api/analyze`, `/api/connect`, `/api/datasets*`, `/api/chat` exercised via curl locally; prod reachability of earlier endpoints confirmed. These working-tree changes are being committed in this change set.
 
 ## Recently completed (committed)
+
+- Dashboard portfolio summary strip added to `src/app/page.tsx`, following the five-metric design rhythm while using portfolio values supported by current data (health, product count, average quality, outcome tracking, and at-risk count). Health averages quality and user-entered outcome scores; no illustrative usage telemetry is presented as live. Visual review in the local browser confirmed the strip fits in five columns at desktop width and uses compact, consistent spacing/type. Automated tests were not run.
 
 - `8be547b`: AI-suggested success metrics + upload-modal design alignment (now superseded/extended by `/api/analyze`).
 - `69389ad`: source-aware/honest lineage + editable outcome tracking (PATCH).
