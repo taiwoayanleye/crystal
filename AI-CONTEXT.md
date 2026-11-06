@@ -10,7 +10,7 @@ _Last updated: 2026-11-06 by Codex (implemented the V2 interface from the Pencil
 
 The V2 `Homepage` frame (`PvWu6`) is implemented at `/`. It provides the Crystal wordmark, Docs/GitHub/Changelog links, hero headline and description, Dashboard and Docs calls to action, and a portfolio snapshot. The three snapshot values are derived from `/api/datasets` (count, average quality estimate, and total rows), rather than hard-coded. The portfolio dashboard now lives at `/dashboard`; dashboard cards still open `/detail/[id]`, and detail-page return/add actions now route back to `/dashboard`.
 
-Validation: local browser review confirmed the homepage layout, populated portfolio stats, and navigation to `/dashboard`; `npx tsc --noEmit` passed. No tests were run. Changed files: `src/app/page.tsx`, `src/app/dashboard/page.tsx`, `src/app/detail/[id]/page.tsx`, `src/app/layout.tsx`, and this handoff.
+Validation: `npx tsc --noEmit` and `npm run build` passed. Browser review confirmed the homepage layout, populated portfolio stats, and navigation to `/dashboard`; after pushing `69e8f5c`, production at https://crystal-eight-omega.vercel.app served the new homepage, and `/dashboard` served the portfolio view. No unit tests were run. Changed files: `src/app/page.tsx`, `src/app/dashboard/page.tsx`, `src/app/detail/[id]/page.tsx`, `src/app/layout.tsx`, and this handoff.
 
 ## Current project status
 
