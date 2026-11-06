@@ -153,6 +153,35 @@ Tested the V2 interface at mobile (375px) and tablet (768px) breakpoints across 
 
 No blocking issues found. Current implementation follows design system scale (4/8/16/24/32px spacing) and preserves readability across all tested sizes. Outcome tracking remains manual, usage/trend metrics labeled as illustrative.
 
-### Separately (product backlog, not the design task)
+## Completed — Universal metric calculation (TAI-26) (2026-11-06)
 
-Enable "Autofill with AI" for PostgreSQL sources; migrate remaining Phase 2 connectors (Snowflake TAI-22, BigQuery TAI-23, cloud storage TAI-27); replace illustrative usage/trend with real signals; add integration tests + CI.
+Implemented source-agnostic quality/usage/trend metrics, unblocking Phase 2 connector development.
+
+**What was done:**
+- Enhanced freshness metric: uses actual `lastSyncAt` timestamp with hourly decay model instead of hardcoded 95%
+  - Fresh on upload: 95%, decays to 0% over 30 days (reflects data recency)
+- Maintained completeness & accuracy as generic heuristics (work for any tabular data)
+  - Completeness: % of non-null, non-empty cells in sample
+  - Accuracy: type consistency + outlier detection
+- Added comprehensive developer guide showing how metrics auto-calculate from `IngestResult`
+
+**Technical approach:**
+- All metrics derived from standard `IngestResult` interface (schema + rows + rowCount + lastSyncAt)
+- No source-specific code needed; works for CSV, PostgreSQL, and future connectors
+- Usage/trend remain deterministic/illustrative (per design)
+
+**Validation:**
+- Tests: 20/20 pass
+- Build: succeeds
+- Commit: `e62d5d5`
+
+**Impact:** Phase 2 connectors (Snowflake, BigQuery, S3/GCS) can now be implemented without metric calculation changes.
+
+## Next steps (product backlog)
+
+1. **Phase 2 connectors:** Start with Snowflake (TAI-22) or BigQuery (TAI-23)
+   - All use unified ingestion + metrics system now in place
+2. **Infrastructure:** Separate Neon dev database; add integration/API tests + CI
+3. **PostgreSQL AI autofill:** Enable "Autofill with AI" for database sources (TAI-26 prerequisite done)
+4. **Real signals:** Replace illustrative usage/trend when query logs available
+5. **Phase 3:** SaaS connectors (Stripe, Salesforce, HubSpot), query editor, scheduled syncs, dbt
