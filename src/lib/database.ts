@@ -96,6 +96,7 @@ async function bootstrap(): Promise<void> {
 async function insertDataset(d: {
   id: string
   name: string
+  icon?: string
   sourceType?: 'csv' | 'postgres'
   successMetrics?: string[]
   problemStatement: string
@@ -115,7 +116,7 @@ async function insertDataset(d: {
     INSERT INTO datasets
       (id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at)
     VALUES (
-      ${d.id}, ${d.name}, ${iconFor(d.id)}, ${d.sourceType ?? 'csv'}, ${JSON.stringify(d.successMetrics ?? [])},
+      ${d.id}, ${d.name}, ${d.icon || iconFor(d.id)}, ${d.sourceType ?? 'csv'}, ${JSON.stringify(d.successMetrics ?? [])},
       ${d.problemStatement}, ${d.users},
       ${JSON.stringify(d.schema)}, ${JSON.stringify(d.metadata)},
       ${JSON.stringify(d.quality)}, ${JSON.stringify(d.outcome)},
@@ -223,6 +224,7 @@ function toWithMetrics(r: DatasetRow): DatasetWithMetrics {
 
 export async function saveDataset(input: {
   name: string
+  icon?: string
   sourceType?: 'csv' | 'postgres'
   successMetrics?: string[]
   problemStatement: string
@@ -237,6 +239,7 @@ export async function saveDataset(input: {
   await insertDataset({
     id,
     name: input.name,
+    icon: input.icon,
     sourceType: input.sourceType ?? 'csv',
     successMetrics: input.successMetrics ?? [],
     problemStatement: input.problemStatement,

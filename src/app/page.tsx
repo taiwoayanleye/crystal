@@ -57,6 +57,8 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sourceType: 'postgres',
+          name: form.name,
+          icon: form.icon,
           problemStatement: form.problemStatement,
           users: form.users,
           successMetrics: form.successMetrics,
@@ -69,6 +71,8 @@ export default function Dashboard() {
     } else {
       const data = new FormData()
       if (form.file) data.append('file', form.file)
+      data.append('name', form.name)
+      data.append('icon', form.icon)
       data.append('problemStatement', form.problemStatement)
       data.append('users', form.users)
       data.append('successMetrics', JSON.stringify(form.successMetrics))

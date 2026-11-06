@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { suggestSuccessMetrics } from '@/lib/claude'
+import { analyzeDataset } from '@/lib/claude'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/suggest-metrics
- * Inspect a dataset's schema + sample and return AI-proposed success metrics.
+ * POST /api/analyze
+ * Inspect a dataset's schema + sample and return an AI analysis:
+ * a problem statement, the teams who'd use it, and specific success metrics.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -13,16 +14,16 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(schema) || schema.length === 0) {
       return NextResponse.json({ error: 'schema is required' }, { status: 400 })
     }
-    const metrics = await suggestSuccessMetrics({
+    const analysis = await analyzeDataset({
       schema,
       sampleRows: Array.isArray(sampleRows) ? sampleRows : [],
       problemStatement,
     })
-    return NextResponse.json({ metrics })
+    return NextResponse.json(analysis)
   } catch (error) {
-    console.error('suggest-metrics error:', error)
+    console.error('analyze error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to suggest metrics' },
+      { error: error instanceof Error ? error.message : 'Failed to analyze' },
       { status: 500 }
     )
   }

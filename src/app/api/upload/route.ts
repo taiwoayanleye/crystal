@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
     const problemStatement = (formData.get('problemStatement') as string) || 'Dataset analysis'
     const users = (formData.get('users') as string) || 'Data team'
+    const nameOverride = (formData.get('name') as string | null)?.trim() || ''
+    const icon = (formData.get('icon') as string | null)?.trim() || undefined
     let successMetrics: string[] = []
     try {
       const raw = formData.get('successMetrics') as string | null
@@ -47,7 +49,8 @@ export async function POST(request: NextRequest) {
 
     // Save to database
     const datasetId = await saveDataset({
-      name: file.name.replace(/\.csv$/i, ''),
+      name: nameOverride || file.name.replace(/\.csv$/i, ''),
+      icon,
       problemStatement,
       users,
       schema: headers,

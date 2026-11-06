@@ -118,32 +118,56 @@ export interface SuggestedMetric {
   description: string
 }
 
+export interface DatasetAnalysis {
+  name: string
+  icon: string
+  problemStatement: string
+  users: string
+  metrics: SuggestedMetric[]
+}
+
 /**
- * Ask Claude to inspect a dataset's schema + sample and propose specific,
- * measurable success metrics tailored to the actual columns.
+ * Ask Claude to inspect a dataset's schema + sample and propose a problem
+ * statement, the teams who'd use it, and specific success metrics — all
+ * tailored to the actual columns.
  */
-export async function suggestSuccessMetrics(input: {
+export async function analyzeDataset(input: {
   schema: string[]
   sampleRows: Record<string, any>[]
   problemStatement?: string
-}): Promise<SuggestedMetric[]> {
+}): Promise<DatasetAnalysis> {
   if (!ANTHROPIC_API_KEY) {
     // Honest fallback when no key is configured.
-    return [
-      { name: 'Adoption', description: '% of target users actively querying the dataset' },
-      { name: 'Query volume', description: 'Queries per week against the dataset' },
-      { name: 'Business impact', description: 'Revenue or cost outcome attributed to decisions from this data' },
-    ]
+    return {
+      name: '',
+      icon: '',
+      problemStatement: '',
+      users: '',
+      metrics: [
+        { name: 'Adoption', description: '% of target users actively querying the dataset' },
+        { name: 'Query volume', description: 'Queries per week against the dataset' },
+        { name: 'Business impact', description: 'Revenue or cost outcome attributed to decisions from this data' },
+      ],
+    }
   }
 
-  const system = `You are a data-product analyst. Given a dataset's columns, a sample of rows, and the problem it should solve, propose 4 SPECIFIC, measurable success metrics for treating it as a data product.
+  const system = `You are a data-product analyst. Given a dataset's columns and a sample of rows, infer how it would be used as a data product.
+
+Return ONLY a JSON object (no prose, no markdown) with exactly these keys:
+{
+  "name": string,               // a short, human-friendly Title Case name, 2-4 words, no file extensions or underscores (e.g. "Telco Customer Churn")
+  "icon": string,               // a single emoji that represents the data's domain (e.g. "📉")
+  "problemStatement": string,   // one concise sentence: the problem this data could solve
+  "users": string,              // the teams/roles who would use it, comma-separated (e.g. "Retention, Finance")
+  "metrics": [{"name": string, "description": string}]  // 4 SPECIFIC, measurable success metrics
+}
 
 Rules:
-- Be specific to the actual columns present (reference them), not generic.
+- Reference the ACTUAL columns present; do not be generic.
 - Each metric must be measurable and tied to a business or data outcome.
-- Return ONLY a JSON array of objects: [{"name": string, "description": string}]. No prose, no markdown.`
+- If a problem statement is provided, refine it; otherwise infer one.`
 
-  const user = `Problem: ${input.problemStatement || '(not specified)'}
+  const user = `Existing problem statement (may be empty): ${input.problemStatement || '(none)'}
 
 Columns: ${input.schema.join(', ')}
 
@@ -167,22 +191,28 @@ ${JSON.stringify(input.sampleRows.slice(0, 15), null, 2)}`
 
   if (!response.ok) throw new Error(`Claude API error: ${response.status}`)
   const data = (await response.json()) as ClaudeResponse
-  const text = data.content.find((c) => c.type === 'text')?.text ?? '[]'
+  const text = data.content.find((c) => c.type === 'text')?.text ?? '{}'
 
-  // Be forgiving: extract the first JSON array from the response.
-  const match = text.match(/\[[\s\S]*\]/)
+  // Be forgiving: extract the first JSON object from the response.
+  const match = text.match(/\{[\s\S]*\}/)
   try {
     const parsed = JSON.parse(match ? match[0] : text)
-    if (Array.isArray(parsed)) {
-      return parsed
-        .filter((m) => m && typeof m.name === 'string')
-        .slice(0, 6)
-        .map((m) => ({ name: String(m.name), description: String(m.description ?? '') }))
+    const metrics = Array.isArray(parsed.metrics)
+      ? parsed.metrics
+          .filter((m: any) => m && typeof m.name === 'string')
+          .slice(0, 6)
+          .map((m: any) => ({ name: String(m.name), description: String(m.description ?? '') }))
+      : []
+    return {
+      name: typeof parsed.name === 'string' ? parsed.name.slice(0, 80) : '',
+      icon: typeof parsed.icon === 'string' ? parsed.icon.trim().slice(0, 8) : '',
+      problemStatement: typeof parsed.problemStatement === 'string' ? parsed.problemStatement : '',
+      users: typeof parsed.users === 'string' ? parsed.users : '',
+      metrics,
     }
   } catch {
-    /* fall through */
+    return { name: '', icon: '', problemStatement: '', users: '', metrics: [] }
   }
-  return []
 }
 
 /**

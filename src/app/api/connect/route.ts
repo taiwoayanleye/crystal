@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sourceType, problemStatement, users, connection, successMetrics } = body
+    const { sourceType, problemStatement, users, connection, successMetrics, name, icon } = body
 
     if (sourceType !== 'postgres') {
       return NextResponse.json(
@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
     const quality = calculateQualityMetrics(result.rows, result.schema)
 
     const datasetId = await saveDataset({
-      name: result.name,
+      name: (typeof name === 'string' && name.trim()) || result.name,
+      icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
       sourceType: 'postgres',
       problemStatement: problemStatement || `PostgreSQL table: ${result.name}`,
       users: users || 'Data team',

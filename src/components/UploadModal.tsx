@@ -19,6 +19,8 @@ export interface PostgresConnection {
 
 export interface UploadSubmit {
   sourceType: SourceType
+  name: string
+  icon: string
   problemStatement: string
   users: string
   file: File | null
@@ -52,30 +54,38 @@ const DEFAULT_METRICS = ['Adoption %', 'Query Volume', 'Business Impact ($)']
 
 export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   const [sourceType, setSourceType] = useState<SourceType>('csv')
+  const [name, setName] = useState('')
+  const [nameEdited, setNameEdited] = useState(false)
+  const [icon, setIcon] = useState('')
   const [problemStatement, setProblemStatement] = useState('')
   const [users, setUsers] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [pg, setPg] = useState<PostgresConnection>(EMPTY_PG)
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
-  const [suggesting, setSuggesting] = useState(false)
-  const [suggestError, setSuggestError] = useState<string | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analyzed, setAnalyzed] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const reset = () => {
     setSourceType('csv')
+    setName('')
+    setNameEdited(false)
+    setIcon('')
     setProblemStatement('')
     setUsers('')
     setFile(null)
     setPg(EMPTY_PG)
     setSelectedMetrics([])
     setSuggestions([])
-    setSuggestError(null)
+    setAiError(null)
+    setAnalyzed(false)
     setError(null)
     setSubmitting(false)
-    setSuggesting(false)
+    setAnalyzing(false)
   }
 
   const close = () => {
@@ -90,37 +100,51 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   const pickFile = (f: File | null) => {
     setError(null)
     setSuggestions([])
-    setSuggestError(null)
+    setAiError(null)
+    setAnalyzed(false)
     if (f && !f.name.toLowerCase().endsWith('.csv')) {
       setError('Please choose a .csv file')
       return
     }
     setFile(f)
+    // Seed a reasonable name from the filename until AI (or the user) refines it.
+    if (f && !nameEdited) setName(f.name.replace(/\.csv$/i, ''))
   }
 
-  const suggestWithAI = async () => {
-    setSuggestError(null)
-    setSuggesting(true)
+  const metricLabel = (s: Suggestion) => (s.description ? `${s.name} — ${s.description}` : s.name)
+
+  const autofillWithAI = async () => {
+    setAiError(null)
+    setAnalyzing(true)
     try {
       if (!file) throw new Error('Choose a CSV first')
       const { headers, rows } = await parseCSV(file)
-      const res = await fetch('/api/suggest-metrics', {
+      const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schema: headers,
-          sampleRows: rows.slice(0, 15),
-          problemStatement,
-        }),
+        body: JSON.stringify({ schema: headers, sampleRows: rows.slice(0, 15), problemStatement }),
       })
-      if (!res.ok) throw new Error('Could not get suggestions')
-      const { metrics } = await res.json()
-      setSuggestions(Array.isArray(metrics) ? metrics : [])
-      if (!metrics?.length) setSuggestError('No suggestions returned — try a clearer problem statement.')
+      if (!res.ok) throw new Error('Could not analyze the data')
+      const analysis = await res.json()
+
+      // Fill the fields — a clean name + emoji, and problem/users when empty.
+      if (!nameEdited && analysis.name) setName(analysis.name)
+      if (analysis.icon) setIcon(analysis.icon)
+      if (!problemStatement.trim() && analysis.problemStatement) setProblemStatement(analysis.problemStatement)
+      if (!users.trim() && analysis.users) setUsers(analysis.users)
+
+      const metrics: Suggestion[] = Array.isArray(analysis.metrics) ? analysis.metrics : []
+      setSuggestions(metrics)
+      // Auto-select the suggested metrics (it's an autofill).
+      setSelectedMetrics((prev) => Array.from(new Set([...prev, ...metrics.map(metricLabel)])))
+      setAnalyzed(true)
+      if (!metrics.length && !analysis.problemStatement) {
+        setAiError('Could not derive suggestions from this file.')
+      }
     } catch (err) {
-      setSuggestError(err instanceof Error ? err.message : 'Suggestion failed')
+      setAiError(err instanceof Error ? err.message : 'Analysis failed')
     } finally {
-      setSuggesting(false)
+      setAnalyzing(false)
     }
   }
 
@@ -153,6 +177,8 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
     try {
       await onSubmit({
         sourceType,
+        name: name.trim(),
+        icon: icon.trim(),
         problemStatement,
         users: users || 'Data team',
         file,
@@ -172,6 +198,12 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
     'w-full px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary'
   const setPgField = (k: keyof PostgresConnection, v: string | boolean) =>
     setPg((prev) => ({ ...prev, [k]: v }))
+
+  const sparkle = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="flex-shrink-0">
+      <path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9L12 2zM19 14l.9 2.4L22 17l-2.1.6L19 20l-.9-2.4L16 17l2.1-.6L19 14zM5 14l.9 2.4L8 17l-2.1.6L5 20l-.9-2.4L2 17l2.1-.6L5 14z" />
+    </svg>
+  )
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={close}>
@@ -200,30 +232,6 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
               <option value="csv">CSV file</option>
               <option value="postgres">PostgreSQL database</option>
             </select>
-          </div>
-
-          <div>
-            <label className="text-small text-text-dark font-medium block mb-2">
-              What problem does this data solve?
-            </label>
-            <input
-              type="text"
-              value={problemStatement}
-              onChange={(e) => setProblemStatement(e.target.value)}
-              placeholder="e.g. Predict customer churn"
-              className={inputCls}
-            />
-          </div>
-
-          <div>
-            <label className="text-small text-text-dark font-medium block mb-2">Who uses this data?</label>
-            <input
-              type="text"
-              value={users}
-              onChange={(e) => setUsers(e.target.value)}
-              placeholder="e.g. Finance, Product teams"
-              className={inputCls}
-            />
           </div>
 
           {sourceType === 'csv' && (
@@ -268,15 +276,38 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  <div className={file ? 'text-text-dark font-medium' : 'text-text-dark'}>
-                    {file ? `📄 ${file.name}` : 'Drag & Drop CSV Here'}
-                  </div>
+                  <div className="text-text-dark">{file ? `📄 ${file.name}` : 'Drag & Drop CSV Here'}</div>
                   <div className="text-small text-primary mt-1">
                     {file ? 'Click to choose a different file' : 'or Click to Browse'}
                   </div>
                 </label>
               </div>
               <p className="text-small text-text-light mt-2">Supports .csv · up to 10MB</p>
+            </div>
+          )}
+
+          {/* Hero AI action — fills the fields below from the data */}
+          {sourceType === 'csv' && (
+            <div>
+              <button
+                type="button"
+                onClick={autofillWithAI}
+                disabled={!file || analyzing}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium text-body transition-smooth ${
+                  !file
+                    ? 'bg-bg-subtle text-text-light cursor-not-allowed'
+                    : 'bg-gradient-to-r from-primary to-navy text-white hover:opacity-90'
+                }`}
+              >
+                {sparkle}
+                {analyzing ? 'Analyzing your data…' : analyzed ? 'Re-run AI autofill' : 'Autofill with AI'}
+              </button>
+              <p className="text-small text-text-light mt-1 text-center">
+                {file
+                  ? 'Reads your columns + a sample to fill the problem, users, and success metrics.'
+                  : 'Attach a CSV above to let AI fill the rest.'}
+              </p>
+              {aiError && <p className="text-small text-error mt-1 text-center">{aiError}</p>}
             </div>
           )}
 
@@ -324,23 +355,53 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
             </div>
           )}
 
-          {/* Define Success Metrics (optional) + AI suggestions */}
-          <div className="border-t border-border pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-small text-text-dark font-medium">Define Success Metrics (optional)</label>
-              {sourceType === 'csv' && (
-                <button
-                  type="button"
-                  onClick={suggestWithAI}
-                  disabled={!file || suggesting}
-                  className="text-small text-primary font-medium disabled:opacity-40 hover:opacity-80"
-                  title={file ? 'Inspect the data and suggest metrics' : 'Choose a CSV first'}
-                >
-                  {suggesting ? 'Inspecting…' : '✨ Suggest with AI'}
-                </button>
-              )}
+          <div>
+            <label className="text-small text-text-dark font-medium block mb-2">Dataset name</label>
+            <div className="flex gap-2">
+              <div className="w-11 flex-shrink-0 flex items-center justify-center border border-border rounded-md text-xl" title="Icon">
+                {icon || '📄'}
+              </div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  setNameEdited(true)
+                }}
+                placeholder="e.g. Telco Customer Churn"
+                className={inputCls}
+              />
             </div>
+          </div>
 
+          <div>
+            <label className="text-small text-text-dark font-medium block mb-2">
+              What problem does this data solve?
+            </label>
+            <input
+              type="text"
+              value={problemStatement}
+              onChange={(e) => setProblemStatement(e.target.value)}
+              placeholder="e.g. Predict customer churn"
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className="text-small text-text-dark font-medium block mb-2">Who uses this data?</label>
+            <input
+              type="text"
+              value={users}
+              onChange={(e) => setUsers(e.target.value)}
+              placeholder="e.g. Finance, Product teams"
+              className={inputCls}
+            />
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <label className="text-small text-text-dark font-medium block mb-2">
+              Define Success Metrics (optional)
+            </label>
             <div className="space-y-2">
               {DEFAULT_METRICS.map((metric) => (
                 <label key={metric} className="flex items-center gap-2 cursor-pointer">
@@ -355,14 +416,12 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
               ))}
             </div>
 
-            {suggestError && <p className="text-small text-text-light mt-2">{suggestError}</p>}
-
             {suggestions.length > 0 && (
               <div className="mt-3">
-                <p className="text-small text-text-light mb-2">✨ AI-suggested for this data</p>
+                <p className="text-small text-text-light mb-2 flex items-center gap-1">{sparkle} AI-suggested for this data</p>
                 <div className="space-y-2">
                   {suggestions.map((s) => {
-                    const label = s.description ? `${s.name} — ${s.description}` : s.name
+                    const label = metricLabel(s)
                     return (
                       <label key={label} className="flex items-start gap-2 cursor-pointer">
                         <input
