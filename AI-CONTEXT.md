@@ -133,9 +133,25 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 - Reconcile historical planning docs (Express/SQLite/Vite/Python mentions) with the actual Next.js/Neon architecture.
 - TAI-20 outreach is drafted on the Linear issue but must be **sent by a human** — not an agent action.
 
-## Next recommended step
+## Completed — V2 responsive design review (2026-11-06)
 
-Review the V2 interface at mobile and tablet widths, especially the sidebar replacement, five-item portfolio strip, and assistant panel. Keep outcome tracking manual and usage/activity illustrative until real event sources exist.
+Tested the V2 interface at mobile (375px) and tablet (768px) breakpoints across the homepage, dashboard, detail page, and assistant panel. Findings:
+
+**What works well:**
+- **Dashboard:** Sidebar hides on mobile, cards display in single column with proper spacing
+- **Detail page sections:** Quality signals (3-column → stacked), Demo activity metrics, Usage Trend chart, Outcome tracking, and Data profile all responsive
+- **Lineage/Data flow:** Uses `overflow-x-auto` for horizontal scrolling on mobile; all four stages (Source → Ingestion → Profile → Data product) and audience section remain accessible
+- **Assistant panel:** Displays as full-width overlay on mobile and right-side panel on tablet; starter prompts and input field properly sized
+- **Data profile table:** Columns compress appropriately, text remains readable on narrow viewports
+- **Portfolio stats:** Three-column grid with vertical dividers works at mobile widths
+
+**Responsive design approach:**
+- Consistent use of Tailwind breakpoints (sm:, md:, lg:); `hidden sm:inline` hides nav links on mobile, preserving header space
+- Fixed-width cards (w-44) in lineage flow enable horizontal scrolling where needed
+- Padding/spacing scales with breakpoints (px-5 sm:px-8 lg:px-12)
+- Table summaries with badges render cleanly without overflow
+
+No blocking issues found. Current implementation follows design system scale (4/8/16/24/32px spacing) and preserves readability across all tested sizes. Outcome tracking remains manual, usage/trend metrics labeled as illustrative.
 
 ### Separately (product backlog, not the design task)
 
