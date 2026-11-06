@@ -6,7 +6,7 @@ import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatPanel } from '@/components/ChatPanel'
 import { MetricCard } from '@/components/MetricCard'
-import { UploadModal } from '@/components/UploadModal'
+import { UploadModal, type UploadSubmit } from '@/components/UploadModal'
 import { Button } from '@/components/Button'
 
 interface Dataset {
@@ -48,20 +48,34 @@ export default function Dashboard() {
     }
   }
 
-  const handleAddDataset = async (formData: {
-    file: File | null
-    problemStatement: string
-    users: string
-  }) => {
-    const data = new FormData()
-    if (formData.file) data.append('file', formData.file)
-    data.append('problemStatement', formData.problemStatement)
-    data.append('users', formData.users)
+  const handleAddDataset = async (form: UploadSubmit) => {
+    let response: Response
 
-    const response = await fetch('/api/upload', { method: 'POST', body: data })
+    if (form.sourceType === 'postgres') {
+      response = await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceType: 'postgres',
+          problemStatement: form.problemStatement,
+          users: form.users,
+          connection: {
+            ...form.connection,
+            port: Number(form.connection.port) || 5432,
+          },
+        }),
+      })
+    } else {
+      const data = new FormData()
+      if (form.file) data.append('file', form.file)
+      data.append('problemStatement', form.problemStatement)
+      data.append('users', form.users)
+      response = await fetch('/api/upload', { method: 'POST', body: data })
+    }
+
     if (!response.ok) {
       const body = await response.json().catch(() => ({}))
-      throw new Error(body.error || 'Upload failed')
+      throw new Error(body.error || 'Failed to create dataset')
     }
 
     const result = await response.json()
