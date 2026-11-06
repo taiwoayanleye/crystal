@@ -1,6 +1,6 @@
-# Crystal — Data-as-a-Product Dashboard
+# Crystal — Data-as-a-Product Platform
 
-A Next.js application demonstrating a **data-as-a-product** framework: outcome measurement, GenAI insights, and data-lineage visualization for enterprise data teams.
+A Next.js application demonstrating a **data-as-a-product** framework: quality signals, outcome tracking, AI-assisted insights, and source lineage for enterprise data teams.
 
 **Live demo:** https://crystal-eight-omega.vercel.app
 
@@ -18,15 +18,16 @@ It also ships a Claude-powered assistant for instant, context-aware insights, an
 
 ## Features
 
-### Dashboard home
-- Grid of data-product cards, each showing Quality / Usage / Outcome scores, the hypothesis, and status.
+### Homepage and dashboard
+- `/` is the public homepage, with links to the project docs, GitHub, and dashboard plus a live portfolio snapshot.
+- `/dashboard` is the portfolio dashboard, with searchable data-product cards showing quality estimates, illustrative demo activity, outcome status, and hypothesis.
 - "Ask" opens the Claude assistant scoped to that dataset.
 
 ### Dataset detail
 - Full quality breakdown (freshness, completeness, accuracy) with color-coded bars.
 - Usage metrics + a 30-day trend chart.
 - Outcome tracking (hypothesis → status → business impact → score).
-- Data lineage: Raw → ETL → Transform → Dataset → Usage, with fresh/stale/error status.
+- Observed data flow: Source → Ingestion → Profile → Data product. Intended audiences are shown separately from connected downstream systems.
 - Delete action with inline confirm.
 
 ### Upload
@@ -60,6 +61,8 @@ Browser (Next.js App Router, client components)
   ├─ /api/datasets/[id]   GET   detail (quality, usage, trend, lineage)
   │                       DELETE remove a dataset
   ├─ /api/upload          POST  parse CSV → compute quality → persist
+  ├─ /api/connect         POST  connect to PostgreSQL → snapshot → persist
+  ├─ /api/analyze         POST  analyze CSV columns/sample for upload suggestions
   └─ /api/chat            POST  dataset-grounded Claude insight
              │
              ▼
@@ -101,7 +104,7 @@ On Vercel, these are provisioned automatically when you connect the Neon integra
 ```bash
 npm run dev
 ```
-Open http://localhost:3000. On first request the app auto-creates its schema and seeds three sample datasets.
+Open http://localhost:3000 for the homepage, then choose **Open Dashboard** or visit http://localhost:3000/dashboard. On first request the app auto-creates its schema and seeds sample datasets.
 
 ### 4. Test
 ```bash
@@ -116,9 +119,10 @@ npm test
 crystal/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx                 # Dashboard home
+│   │   ├── page.tsx                 # Public homepage
+│   │   ├── dashboard/page.tsx       # Portfolio dashboard
 │   │   ├── detail/[id]/page.tsx     # Dataset detail
-│   │   └── api/                     # upload · datasets · datasets/[id] · chat
+│   │   └── api/                     # upload · connect · analyze · datasets · chat
 │   ├── components/                  # Header, Sidebar, MetricCard, ChatPanel, …
 │   └── lib/
 │       ├── db.ts                    # Neon client (lazy, no-store)
@@ -140,6 +144,8 @@ crystal/
 | `/api/datasets/[id]` | GET | Dataset detail (quality, usage, trend, lineage) |
 | `/api/datasets/[id]` | DELETE | Remove a dataset |
 | `/api/upload` | POST | Upload CSV → compute quality → persist |
+| `/api/connect` | POST | Connect to PostgreSQL → snapshot → persist |
+| `/api/analyze` | POST | Analyze CSV sample and suggest product details/success metrics |
 | `/api/chat` | POST | Dataset-grounded Claude insight |
 
 ---

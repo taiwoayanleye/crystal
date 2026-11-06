@@ -6,11 +6,17 @@ Both Codex and Claude Code must read this file with `AGENTS.md` before significa
 
 _Last updated: 2026-11-06 by Codex (implemented the V2 interface from the Pencil source)._
 
+## Handoff snapshot
+
+- **Done:** V2 homepage at `/`, portfolio dashboard at `/dashboard`, detail pages at `/detail/[id]`; links and detail-page return/add actions use the new routes. Production was built and verified at the live URL.
+- **In progress:** None. The homepage/dashboard route work is committed and pushed; no pending implementation changes are known.
+- **Next:** Review the homepage, dashboard, and assistant at mobile/tablet widths. Preserve the honest-data rules: outcomes are manually tracked, usage/trend are illustrative, and lineage only shows observed processing plus an explicitly unconnected audience.
+
 ## Completed — Homepage route from the V2 design (2026-11-06)
 
 The V2 `Homepage` frame (`PvWu6`) is implemented at `/`. It provides the Crystal wordmark, Docs/GitHub/Changelog links, hero headline and description, Dashboard and Docs calls to action, and a portfolio snapshot. The three snapshot values are derived from `/api/datasets` (count, average quality estimate, and total rows), rather than hard-coded. The portfolio dashboard now lives at `/dashboard`; dashboard cards still open `/detail/[id]`, and detail-page return/add actions now route back to `/dashboard`.
 
-Validation: `npx tsc --noEmit` and `npm run build` passed. Browser review confirmed the homepage layout, populated portfolio stats, and navigation to `/dashboard`; after pushing `69e8f5c`, production at https://crystal-eight-omega.vercel.app served the new homepage, and `/dashboard` served the portfolio view. No unit tests were run. Changed files: `src/app/page.tsx`, `src/app/dashboard/page.tsx`, `src/app/detail/[id]/page.tsx`, `src/app/layout.tsx`, and this handoff.
+Validation: `npx tsc --noEmit` and `npm run build` passed. Browser review confirmed the homepage layout, populated portfolio stats, and navigation to `/dashboard`; production at https://crystal-eight-omega.vercel.app serves the new homepage, and `/dashboard` serves the portfolio view. No unit tests were run. Changed files: `README.md`, `src/app/page.tsx`, `src/app/dashboard/page.tsx`, `src/app/detail/[id]/page.tsx`, `src/app/layout.tsx`, and this handoff.
 
 ## Current project status
 
