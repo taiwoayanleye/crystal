@@ -14,15 +14,10 @@ Crystal is an implemented, deployed Next.js 14 (App Router) data-as-a-product da
 - **Repo:** https://github.com/taiwoayanleye/crystal (public, git-connected to Vercel — pushes to `main` auto-deploy).
 - **Env:** `DATABASE_URL` (Neon, via Vercel Marketplace) and `ANTHROPIC_API_KEY` are set in Vercel for Production/Preview/Development and pulled locally.
 
-## In progress (uncommitted)
+## In progress
 
-End-to-end UI critique and refinements are in the current working tree:
-
-- Dashboard summary uses explicit product, quality, outcome-tracking, review, and source counts instead of a composite “health” score whose formula mixed quality with user-entered outcomes.
-- Dataset cards label assistant-derived activity as illustrative and show outcomes as “Not started” rather than plotting a zero score.
-- Detail page gives quality estimates their heuristic context; lineage now shows the observed source → ingestion → profile → product flow and intended audience, without inventing downstream dashboards or freshness states.
-- Dashboard, detail, and assistant layouts are more responsive; the upload dialog has a clearer hierarchy, modal semantics, and associated labels; keyboard focus is visible globally.
-- Local `npx tsc --noEmit` passes. Browser review succeeded after restarting duplicate Next.js dev servers: concurrent servers shared `.next`, leaving HTML references to missing client bundles and preventing hydration. One clean server now runs at `http://localhost:3000`. The pre-existing `design/crystal.pen` modification was preserved and not edited.
+- The visual design source `design/crystal.pen` has a pre-existing uncommitted modification. It was preserved and not edited during the code refinements; inspect its diff before changing or reverting it.
+- One clean local Next.js dev server is running at `http://localhost:3000`. Two duplicate servers previously shared `.next`, causing stale references to missing browser bundles; both were stopped and the server was restarted. Dashboard and detail pages were then confirmed rendering in the integrated browser.
 
 The AI-assisted upload flow — previously flagged here as "inferred from the diff, needs validation" — is now **implemented and validated**, and extended with AI name/emoji suggestion:
 
@@ -36,9 +31,10 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Recently completed (committed)
 
+- `77b079c`: end-to-end portfolio UI refinements, pushed to `main` as Taiwo Ayanleye. Dashboard summary now uses explicit portfolio counts (the earlier composite Health score was removed); cards show source/snapshot metadata and distinguish demo activity and unstarted outcomes; detail quality estimates are explained; lineage no longer implies unconnected downstream dashboards; responsive layouts and upload-dialog accessibility were improved. `npx tsc --noEmit` and `git diff --check` passed. Browser review confirmed dashboard and detail rendering after the dev-server restart; tests were not run for this design task.
 - `4bba12c`: unified CSV and PostgreSQL ingestion; added CSV connector, common persistence path, normalized source metadata, and last-sync timestamps. `npm test` passed (20 tests) and the production build passed before the commit; pushed to `main`.
 
-- Dashboard portfolio summary strip added to `src/app/page.tsx`, following the five-metric design rhythm while using portfolio values supported by current data (health, product count, average quality, outcome tracking, and at-risk count). Health averages quality and user-entered outcome scores; no illustrative usage telemetry is presented as live. Visual review in the local browser confirmed the strip fits in five columns at desktop width and uses compact, consistent spacing/type. Automated tests were not run.
+- Earlier portfolio summary strip added to `src/app/page.tsx`; the composite Health value was superseded by explicit portfolio counts in `77b079c` because it mixed quality estimates with user-entered outcome scores.
 
 - `8be547b`: AI-suggested success metrics + upload-modal design alignment (now superseded/extended by `/api/analyze`).
 - `69389ad`: source-aware/honest lineage + editable outcome tracking (PATCH).
@@ -98,4 +94,4 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Next recommended step
 
-Update the pen.dev source screens to match the revised product semantics. Keep outcome tracking manual and usage illustrative until real event sources exist.
+Review the pre-existing `design/crystal.pen` diff, then update its screens to match the current UI semantics: explicit portfolio measures, heuristic quality estimates, illustrative usage, user-entered outcome tracking, and observed-only lineage. Keep outcome tracking manual and usage illustrative until real event sources exist.
