@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
 import { Sidebar } from '@/components/Sidebar'
 import { ChatPanel } from '@/components/ChatPanel'
 import { MetricCard } from '@/components/MetricCard'
@@ -60,32 +59,32 @@ function PortfolioSummary({ datasets }: { datasets: Dataset[] }) {
   ] as const
 
   const toneClasses = {
-    success: 'bg-success/10 text-success',
-    primary: 'bg-primary/10 text-primary',
-    navy: 'bg-navy/10 text-navy',
-    warning: 'bg-warning/10 text-warning',
+    success: 'bg-success-dim text-data-green',
+    primary: 'bg-bg-elevated text-text-primary',
+    navy: 'bg-bg-elevated text-text-primary',
+    warning: 'bg-warning-dim text-data-amber',
   }
 
   return (
     <section
       aria-label="Portfolio summary"
-      className="grid grid-cols-2 gap-3 mb-8 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5"
+      className="mb-7 grid grid-cols-2 overflow-hidden rounded-xl border border-border-subtle bg-surface sm:grid-cols-3 xl:grid-cols-5"
     >
       {items.map((item) => (
         <div
           key={item.label}
           title={'hint' in item ? item.hint : undefined}
-          className="min-w-0 flex items-center gap-3 rounded-lg border border-border bg-white p-4 shadow-sm"
+          className="min-w-0 flex items-center gap-3 border-b border-border-subtle px-4 py-3.5 last:border-b-0 sm:px-5 xl:border-b-0 xl:border-r xl:last:border-r-0"
         >
           <span
             aria-hidden="true"
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-base font-semibold ${toneClasses[item.tone]}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${toneClasses[item.tone]}`}
           >
             {item.icon}
           </span>
           <div className="min-w-0">
-            <p className="text-lg font-semibold leading-6 tracking-tight text-navy tabular-nums">{item.value}</p>
-            <p className="truncate text-xs leading-4 text-text-light">{item.label}</p>
+            <p className="truncate text-[15px] font-semibold leading-5 tracking-tight text-text-primary tabular-nums">{item.value}</p>
+            <p className="truncate text-[10px] leading-4 text-text-tertiary">{item.label}</p>
           </div>
         </div>
       ))}
@@ -100,10 +99,25 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [chatDatasetId, setChatDatasetId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchDatasets()
+    if (new URLSearchParams(window.location.search).get('add') === '1') {
+      setIsUploadModalOpen(true)
+      window.history.replaceState(null, '', '/')
+    }
   }, [])
+
+  const filteredDatasets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return datasets
+    return datasets.filter((dataset) =>
+      [dataset.title, dataset.hypothesis, dataset.sourceType]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query))
+    )
+  }, [datasets, searchQuery])
 
   const fetchDatasets = async () => {
     try {
@@ -167,36 +181,54 @@ export default function Dashboard() {
   const chatDataset = datasets.find((d) => d.id === chatDatasetId)
 
   return (
-    <div className="flex flex-col h-screen bg-white">
-      <Header />
-
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-bg-base">
         <Sidebar
           datasets={datasets.map((d) => ({ id: d.id, name: d.title, icon: d.icon }))}
           onAddDataset={() => setIsUploadModalOpen(true)}
           onSelectDataset={(id) => router.push(`/detail/${id}`)}
           onAskDataset={(id) => setChatDatasetId(id)}
+          onDashboard={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onDataProducts={() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' })}
+          onLineage={() => datasets[0] && router.push(`/detail/${datasets[0].id}#data-flow`)}
           activeDatasetId={chatDatasetId}
+          activeSection="dashboard"
         />
 
-        <div className="flex-1 overflow-y-auto bg-bg-subtle p-4 sm:p-6 lg:p-8">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
+        <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-9 lg:py-8">
+          <div className="mx-auto max-w-[1440px]">
+            <div className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-light mb-2">Portfolio</p>
-                <h1 className="text-page-title text-navy">Data products</h1>
-                <p className="text-small text-text-light mt-2 max-w-xl">
-                  Quality signals, intended outcomes, and source coverage across your data products.
+                <div className="mb-4 flex items-center justify-between md:hidden">
+                  <a href="/" className="flex items-center gap-2 font-heading text-base font-semibold text-text-primary">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-accent text-white" aria-hidden="true">◇</span>
+                    Crystal
+                  </a>
+                  <button onClick={() => setIsUploadModalOpen(true)} aria-label="Add data product" className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white">+</button>
+                </div>
+                <h1 className="font-heading text-2xl font-semibold tracking-tight text-text-primary sm:text-[26px]">Data Products</h1>
+                <p className="mt-1.5 max-w-xl text-[13px] text-text-secondary">
+                  Quality signals, outcomes, and source coverage across your portfolio.
                 </p>
               </div>
-              <Button variant="primary" onClick={() => setIsUploadModalOpen(true)} className="self-start sm:self-auto">
-                <span aria-hidden="true" className="mr-2">+</span>Add data product
-              </Button>
+              <div className="flex items-center gap-3 xl:pt-1">
+                <label className="flex h-9 min-w-0 items-center gap-2 rounded-lg border border-border-subtle bg-surface px-3 text-text-tertiary focus-within:border-border-default focus-within:ring-2 focus-within:ring-accent/10 xl:w-64">
+                  <span aria-hidden="true" className="text-base">⌕</span>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search data products"
+                    aria-label="Search data products"
+                    className="min-w-0 flex-1 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
+                  />
+                </label>
+                <span title="Signed in as Taiwo Ayanleye" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">T</span>
+              </div>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-error/10 border border-error rounded-lg">
-                <p className="text-error text-small">{error}</p>
+              <div role="alert" className="mb-5 rounded-lg border border-error/30 bg-error/10 p-3">
+                <p className="text-sm text-error">{error}</p>
               </div>
             )}
 
@@ -214,19 +246,27 @@ export default function Dashboard() {
             {!loading && datasets.length === 0 && (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
-                  <p className="text-text-light mb-6">
-                    No datasets yet. Create one to get started.
+                  <p className="mb-2 font-heading text-lg font-semibold text-text-primary">
+                    No data products yet
                   </p>
-                  <Button variant="primary" onClick={() => setIsUploadModalOpen(true)}>
-                    + Add Your First Dataset
-                  </Button>
+                  <p className="mb-5 text-sm text-text-secondary">Connect a source to start tracking quality and outcomes.</p>
+                  <Button variant="primary" onClick={() => setIsUploadModalOpen(true)}>Add your first data product</Button>
                 </div>
               </div>
             )}
 
             {!loading && datasets.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 lg:gap-5">
-                {datasets.map((dataset) => (
+              <div id="products" className="scroll-mt-6">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-text-tertiary">All data products <span className="ml-1 font-mono">{filteredDatasets.length}</span></h2>
+                </div>
+                {filteredDatasets.length === 0 ? (
+                  <div className="rounded-xl border border-border-subtle bg-surface px-5 py-10 text-center text-sm text-text-secondary">
+                    No data products match “{searchQuery}”.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    {filteredDatasets.map((dataset) => (
                   <MetricCard
                     key={dataset.id}
                     icon={dataset.icon}
@@ -243,10 +283,12 @@ export default function Dashboard() {
                     onAsk={() => setChatDatasetId(dataset.id)}
                   />
                 ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </div>
+        </main>
 
         {chatDatasetId && (
           <ChatPanel
@@ -256,8 +298,6 @@ export default function Dashboard() {
             onClose={() => setChatDatasetId(null)}
           />
         )}
-      </div>
-
       <UploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

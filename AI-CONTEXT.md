@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-06 by Claude Code (design review of `design/crystal.pen`; prior entry by Codex)._
+_Last updated: 2026-11-06 by Codex (implemented the V2 interface from the Pencil source)._
 
 ## Current project status
 
@@ -16,7 +16,7 @@ Crystal is an implemented, deployed Next.js 14 (App Router) data-as-a-product da
 
 ## Completed — `design/crystal.pen` V2 semantic alignment (2026-11-06)
 
-The uncommitted `design/crystal.pen` modification is a full **"V2" redesign**: top-level frames `PvWu6` Homepage, `nEmo8` Dashboard V2, `JyQE0` Detail V2, `kFhfe` Data Lineage V2, `Hqq4n` Upload Modal V2, `V7xjvu` Chat Panel V2, `tPm9N` Components; V2 components `kNzDk` ProgressBar, `WVfpO`/`LZDfw`/`aptDT` Buttons, `GSxG1` MetricCard. **Preserve it — do not revert.** (Inspect with the pencil `execute` tool; `Get('<id>')` returns the subtree, and a `throw new Error(JSON.stringify(...))` is the read channel. `Update('<id>', {content:'...'})` edits a node.)
+The committed `design/crystal.pen` V2 redesign has top-level frames `PvWu6` Homepage, `nEmo8` Dashboard V2, `JyQE0` Detail V2, `kFhfe` Data Lineage V2, `Hqq4n` Upload Modal V2, `V7xjvu` Chat Panel V2, `tPm9N` Components; V2 components `kNzDk` ProgressBar, `WVfpO`/`LZDfw`/`aptDT` Buttons, `GSxG1` MetricCard. Preserve it — do not revert. (Inspect with the pencil `execute` tool; `Get('<id>')` returns the subtree, and a `throw new Error(JSON.stringify(...))` is the read channel. `Update('<id>', {content:'...'})` edits a node.)
 
 Updated the V2 designs to match the implemented product and preserve the distinction between observed data and illustrative/demo information:
 
@@ -26,12 +26,27 @@ Updated the V2 designs to match the implemented product and preserve the distinc
 - **Dashboard V2 (`nEmo8`)** — added the missing `Needs review` KPI and aligned all card activity labels to `Demo activity index`.
 - **Detail V2 (`JyQE0`)** and **Chat Panel V2 (`V7xjvu`)** remain aligned with the current implemented semantics.
 
-Validation: inspected Pencil screenshots for `kFhfe`, `GSxG1`, `Hqq4n`, and `nEmo8`; Pencil layout diagnostics reported no clipped or overflowing nodes in these frames after adjustment. No code tests were run because this was a design-file-only change. The design changes and this handoff are being committed together as Taiwo Ayanleye, with no AI/co-author trailer.
+Validation: inspected Pencil screenshots for `kFhfe`, `GSxG1`, `Hqq4n`, and `nEmo8`; Pencil layout diagnostics reported no clipped or overflowing nodes in these frames after adjustment. The design and handoff were committed in `14094fb` (`Align Crystal V2 design with observed data`) as Taiwo Ayanleye, with no AI/co-author trailer.
+
+## Completed — V2 interface implementation (2026-11-06)
+
+Implemented the V2 visual system in the app based on the committed Pencil frames:
+
+- Replaced the global header with the shared left sidebar, added dashboard portfolio summary, searchable product cards, and responsive dashboard layout.
+- Updated cards to the reference CTA layout: prominent quality score, three metric bars, hypothesis in a soft neutral footer, black **View** action, and neutral **Ask** chat action.
+- Applied V2 typography, neutral surfaces, dark primary actions, spacing, and borders to dashboard, detail, upload modal, chat panel, and lineage.
+- Updated detail layout while preserving real data profile/sample, manual outcome editing, and appropriately labeled illustrative activity. Data flow displays the observed source → ingestion → profile → data product steps and intended audience with a `Not connected` label; it does not imply downstream integrations.
+- Set upload success-metric defaults as selected and restyled the CSV/AI/PostgreSQL form and create action to match V2.
+- Replaced chat auto-scroll via `scrollIntoView` with scroll-container positioning after the integrated browser surfaced a runtime error when opening the Ask CTA.
+
+Changed files: `src/app/page.tsx`, `src/app/detail/[id]/page.tsx`, `src/components/{Button,ChatPanel,LineageFlow,MetricCard,ProgressBar,Sidebar,UploadModal}.tsx`, `src/styles/globals.css`, and `tailwind.config.ts`.
+
+Validation: `npx tsc --noEmit` passed; `git diff --check` passed. Browser review confirmed the dashboard, card CTAs, detail page, four-step lineage, and upload modal. Opened **Ask** from a dashboard card after the scroll fix; the assistant rendered without a Next.js runtime error. Unit tests were not run.
 
 ## Resolved local browser issue
 
 - Two Next.js dev servers had been writing to the same `.next` directory, leaving stale client bundle references and a permanently loading browser UI. Both were stopped and a single dev server was restarted at `http://localhost:3000`; dashboard and detail pages then rendered successfully. Avoid running multiple dev servers for this checkout at once.
-- The user's uncommitted V2 redesign in `design/crystal.pen` was explicitly preserved and continued via Pencil execute; unrelated V2 content was left intact.
+- The user's V2 redesign in `design/crystal.pen` was preserved and continued via Pencil execute, then committed as `14094fb`; unrelated design content was left intact.
 
 The AI-assisted upload flow — previously flagged here as "inferred from the diff, needs validation" — is now **implemented and validated**, and extended with AI name/emoji suggestion:
 
@@ -108,7 +123,7 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Next recommended step
 
-Cross-check the remaining V2 screens (`PvWu6`, `JyQE0`, `V7xjvu`) against current product behavior and decide whether to implement or document any remaining gaps. Keep outcome tracking manual and usage/activity illustrative until real event sources exist.
+Review the V2 interface at mobile and tablet widths, especially the sidebar replacement, five-item portfolio strip, and assistant panel. Keep outcome tracking manual and usage/activity illustrative until real event sources exist. The current code changes are uncommitted.
 
 ### Separately (product backlog, not the design task)
 

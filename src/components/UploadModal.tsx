@@ -61,7 +61,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   const [users, setUsers] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [pg, setPg] = useState<PostgresConnection>(EMPTY_PG)
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([])
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_METRICS)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzed, setAnalyzed] = useState(false)
@@ -79,7 +79,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
     setUsers('')
     setFile(null)
     setPg(EMPTY_PG)
-    setSelectedMetrics([])
+    setSelectedMetrics(DEFAULT_METRICS)
     setSuggestions([])
     setAiError(null)
     setAnalyzed(false)
@@ -195,7 +195,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   if (!isOpen) return null
 
   const inputCls =
-    'w-full px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary'
+    'w-full rounded-md border border-border-default bg-surface px-3 py-2 text-small text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent'
   const setPgField = (k: keyof PostgresConnection, v: string | boolean) =>
     setPg((prev) => ({ ...prev, [k]: v }))
 
@@ -206,18 +206,18 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   )
 
   return (
-    <div className="fixed inset-0 bg-navy/40 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6" onClick={close}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-3 backdrop-blur-sm sm:p-6" onClick={close}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="upload-modal-title"
-        className="bg-white rounded-lg shadow-lg max-w-xl w-full max-h-[92vh] overflow-y-auto"
+        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-xl border border-border-subtle bg-surface shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex justify-between items-center border-b border-border bg-white px-5 py-4 sm:px-6">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface px-5 py-4 sm:px-6">
           <div>
-            <h2 id="upload-modal-title" className="text-section-title text-navy font-semibold">Add a data product</h2>
-            <p className="text-small text-text-light mt-1">Connect a source and describe the value it should create.</p>
+            <h2 id="upload-modal-title" className="font-heading text-lg font-semibold text-text-primary">Add a data product</h2>
+            <p className="mt-1 text-xs text-text-secondary">Connect a source and describe the value it should create.</p>
           </div>
           <button onClick={close} aria-label="Close dialog" className="w-9 h-9 rounded-md text-text-light hover:bg-bg-subtle hover:text-text-dark text-xl leading-none">
             ×
@@ -256,7 +256,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                   pickFile(e.dataTransfer.files?.[0] ?? null)
                 }}
                 className={`border-2 border-dashed rounded-lg p-6 text-center transition-smooth ${
-                  dragging ? 'border-primary bg-primary/5' : file ? 'border-primary/60 bg-primary/5' : 'border-border'
+                  dragging ? 'border-accent bg-bg-elevated' : file ? 'border-accent bg-bg-elevated' : 'border-border-default bg-bg-elevated'
                 }`}
               >
                 <input
@@ -284,7 +284,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
                   <div className="text-text-dark">{file ? `📄 ${file.name}` : 'Drag & Drop CSV Here'}</div>
-                  <div className="text-small text-primary mt-1">
+                  <div className="mt-1 text-small text-text-primary">
                     {file ? 'Click to choose a different file' : 'or Click to Browse'}
                   </div>
                 </label>
@@ -303,7 +303,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium text-body transition-smooth ${
                   !file
                     ? 'bg-bg-subtle text-text-light cursor-not-allowed'
-                    : 'bg-gradient-to-r from-primary to-navy text-white hover:opacity-90'
+                    : 'bg-accent text-white hover:bg-accent-light'
                 }`}
               >
                 {sparkle}
@@ -455,12 +455,12 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
           {error && <p className="text-small text-error">{error}</p>}
         </div>
 
-        <div className="sticky bottom-0 flex gap-3 border-t border-border bg-white px-5 py-4 sm:px-6">
+        <div className="sticky bottom-0 flex gap-3 border-t border-border-subtle bg-surface px-5 py-4 sm:px-6">
           <Button variant="secondary" onClick={close} className="flex-1" disabled={submitting}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSubmit} className="flex-1" disabled={submitting}>
-            {submitting ? (sourceType === 'postgres' ? 'Connecting…' : 'Creating…') : 'Create Dataset'}
+            {submitting ? (sourceType === 'postgres' ? 'Connecting…' : 'Creating…') : 'Create data product'}
           </Button>
         </div>
       </div>

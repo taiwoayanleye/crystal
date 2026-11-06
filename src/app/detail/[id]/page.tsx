@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Header } from '@/components/Header'
+import { Sidebar } from '@/components/Sidebar'
+import { ChatPanel } from '@/components/ChatPanel'
 import { Button } from '@/components/Button'
 import { ProgressBar } from '@/components/ProgressBar'
 import { TrendChart } from '@/components/TrendChart'
@@ -75,9 +76,9 @@ function QualityRow({
 }) {
   const color = qualityColor(value)
   const textColor =
-    color === 'success' ? 'text-success' : color === 'warning' ? 'text-warning' : 'text-error'
+    color === 'success' ? 'text-data-green' : color === 'warning' ? 'text-data-amber' : 'text-error'
   return (
-    <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
+    <div className="rounded-xl border border-border-subtle bg-surface p-5">
       <div className="flex justify-between items-center mb-2">
         <span className="text-small text-text-dark font-medium">{label}</span>
         <span className={`font-mono text-metric ${textColor}`}>{value}%</span>
@@ -94,11 +95,13 @@ export default function ProductDetail() {
   const datasetId = params.id as string
 
   const [data, setData] = useState<DetailData | null>(null)
+  const [sidebarDatasets, setSidebarDatasets] = useState<Array<{ id: string; title: string; icon: string }>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [editingOutcome, setEditingOutcome] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const [savingOutcome, setSavingOutcome] = useState(false)
   const [outcomeDraft, setOutcomeDraft] = useState({
     hypothesis: '',
@@ -111,9 +114,16 @@ export default function ProductDetail() {
     const fetchDataset = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/datasets/${datasetId}`)
+        const [response, listResponse] = await Promise.all([
+          fetch(`/api/datasets/${datasetId}`),
+          fetch('/api/datasets'),
+        ])
         if (!response.ok) throw new Error('Dataset not found')
         setData(await response.json())
+        if (listResponse.ok) {
+          const list = await listResponse.json()
+          setSidebarDatasets(list.map((item: { id: string; title: string; icon: string }) => ({ id: item.id, title: item.title, icon: item.icon })))
+        }
         setError(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dataset')
@@ -123,6 +133,12 @@ export default function ProductDetail() {
     }
     fetchDataset()
   }, [datasetId])
+
+  useEffect(() => {
+    if (data && window.location.hash === '#data-flow') {
+      requestAnimationFrame(() => document.getElementById('data-flow')?.scrollIntoView({ behavior: 'smooth' }))
+    }
+  }, [data])
 
   const startEditOutcome = () => {
     if (!data) return
@@ -169,32 +185,46 @@ export default function ProductDetail() {
     }
   }
 
+  const navigation = (
+    <Sidebar
+      datasets={sidebarDatasets.map((dataset) => ({ id: dataset.id, name: dataset.title, icon: dataset.icon }))}
+      activeDatasetId={datasetId}
+      activeSection="data-products"
+      onSelectDataset={(id) => router.push(`/detail/${id}`)}
+      onDashboard={() => router.push('/')}
+      onDataProducts={() => router.push(`/detail/${datasetId}`)}
+      onLineage={() => document.getElementById('data-flow')?.scrollIntoView({ behavior: 'smooth' })}
+      onAskDataset={() => setChatOpen(true)}
+      onAddDataset={() => router.push('/?add=1')}
+    />
+  )
+
   if (loading) {
     return (
-      <div className="flex flex-col h-screen">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
+      <div className="flex h-screen overflow-hidden bg-bg-base">
+        {navigation}
+        <main className="flex min-w-0 flex-1 items-center justify-center">
           <div className="text-center">
-            <div className="inline-block w-8 h-8 border-4 border-border border-t-primary rounded-full animate-spin mb-4"></div>
-            <p className="text-text-light">Loading dataset...</p>
+            <div className="mb-4 inline-block h-7 w-7 animate-spin rounded-full border-[3px] border-border-subtle border-t-accent"></div>
+            <p className="text-sm text-text-secondary">Loading data product…</p>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="flex flex-col h-screen">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
+      <div className="flex h-screen overflow-hidden bg-bg-base">
+        {navigation}
+        <main className="flex min-w-0 flex-1 items-center justify-center">
           <div className="text-center">
-            <p className="text-error mb-4">{error}</p>
+            <p className="mb-4 text-sm text-error">{error}</p>
             <Button variant="primary" onClick={() => router.push('/')}>
               Back to dashboard
             </Button>
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -202,61 +232,56 @@ export default function ProductDetail() {
   const { quality, usage, outcome } = data.metrics
 
   return (
-    <div className="flex flex-col h-screen bg-bg-subtle">
-      <Header />
-
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto">
+    <div className="flex h-screen overflow-hidden bg-bg-base">
+      {navigation}
+      <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-9 lg:py-8">
+        <div className="mx-auto max-w-[1440px]">
           {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => router.push('/')}
-              className="text-primary text-small font-medium mb-4 hover:opacity-80"
-            >
-              ← Back to dashboard
-            </button>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <h1 className="text-page-title text-navy mb-2 flex items-center gap-3">
-                  <span className="w-11 h-11 flex items-center justify-center rounded-lg bg-white border border-border text-2xl flex-shrink-0">{data.icon}</span>
-                  <span className="break-words">{data.name}</span>
+                <button type="button" onClick={() => router.push('/')} className="mb-2 text-[11px] text-text-tertiary hover:text-text-primary">← Dashboard</button>
+                <h1 className="flex items-center gap-3 font-heading text-2xl font-semibold tracking-tight text-text-primary sm:text-[26px]">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-bg-elevated text-xl">{data.icon}</span>
+                  <span className="truncate">{data.name}</span>
                 </h1>
-                <p className="text-body text-text-light max-w-3xl">{data.problemStatement}</p>
+                <p className="mt-1.5 max-w-3xl text-[13px] text-text-secondary">{data.problemStatement}</p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-white border border-border text-small text-text-dark self-start">
-                {data.sourceType === 'postgres' ? 'PostgreSQL snapshot' : 'CSV snapshot'}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 font-mono text-[10px] text-text-secondary">
+                  {data.sourceType === 'postgres' ? 'PostgreSQL snapshot' : 'CSV snapshot'}
+                </span>
+                <Button variant="primary" size="sm" onClick={() => setChatOpen(true)}>Ask about this data</Button>
+              </div>
             </div>
-          </div>
 
           {/* Metadata */}
-          <div className="bg-white rounded-lg p-5 sm:p-6 mb-10 border border-border shadow-sm">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
-              <div>
-                <p className="text-small text-text-light mb-1">Owner</p>
-                <p className="text-body text-text-dark font-medium">{data.users}</p>
+          <div className="mb-8 overflow-hidden rounded-xl border border-border-subtle bg-surface">
+            <div className="grid grid-cols-2 gap-px bg-surface md:grid-cols-3 xl:grid-cols-5">
+              <div className="border-b border-r border-border-subtle bg-surface px-4 py-3.5">
+                <p className="text-[10px] text-text-tertiary mb-1">Owner</p>
+                <p className="text-xs text-text-primary font-medium">{data.users}</p>
               </div>
-              <div>
-                <p className="text-small text-text-light mb-1">Rows × Cols</p>
-                <p className="text-body text-text-dark font-medium">
+              <div className="border-b border-r border-border-subtle bg-surface px-4 py-3.5">
+                <p className="text-[10px] text-text-tertiary mb-1">Rows × Cols</p>
+                <p className="text-xs text-text-primary font-medium">
                   {data.metadata.rowCount.toLocaleString()} × {data.metadata.columnCount}
                 </p>
               </div>
-              <div>
-                <p className="text-small text-text-light mb-1">Source</p>
-                <p className="text-body text-text-dark font-medium">
+              <div className="border-b border-border-subtle bg-surface px-4 py-3.5 md:border-r">
+                <p className="text-[10px] text-text-tertiary mb-1">Source</p>
+                <p className="text-xs text-text-primary font-medium">
                   {data.sourceType === 'postgres' ? 'PostgreSQL' : 'CSV upload'}
                 </p>
               </div>
-              <div>
-                <p className="text-small text-text-light mb-1">Created</p>
-                <p className="text-body text-text-dark font-medium">
+              <div className="border-r border-border-subtle bg-surface px-4 py-3.5 md:border-b-0">
+                <p className="text-[10px] text-text-tertiary mb-1">Created</p>
+                <p className="text-xs text-text-primary font-medium">
                   {new Date(data.createdAt).toLocaleDateString()}
                 </p>
               </div>
-              <div>
-                <p className="text-small text-text-light mb-1">Last synced</p>
-                <p className="text-body text-text-dark font-medium">
+              <div className="bg-surface px-4 py-3.5">
+                <p className="text-[10px] text-text-tertiary mb-1">Last synced</p>
+                <p className="text-xs text-text-primary font-medium">
                   {new Date(data.lastSyncAt).toLocaleString()}
                 </p>
               </div>
@@ -266,8 +291,8 @@ export default function ProductDetail() {
           {/* Quality Metrics */}
           <div className="mb-10">
             <div className="mb-5">
-              <h2 className="text-section-title text-navy">Quality signals</h2>
-              <p className="text-small text-text-light mt-1">Completeness comes from the stored sample. Freshness and accuracy are heuristic estimates.</p>
+              <h2 className="font-heading text-lg font-semibold text-text-primary">Quality signals</h2>
+              <p className="mt-1 text-xs text-text-secondary">Completeness comes from the stored sample. Freshness and accuracy are heuristic estimates.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <QualityRow label="Freshness estimate" value={quality.freshness} note="Heuristic snapshot score; not a source SLA." />
@@ -279,15 +304,15 @@ export default function ProductDetail() {
           {/* Data Profile — computed from the real sampled rows */}
           <div className="mb-8">
             <div className="flex items-baseline justify-between mb-6">
-              <h2 className="text-section-title text-navy">Data Profile</h2>
-              <span className="text-small text-text-light">
+              <h2 className="font-heading text-lg font-semibold text-text-primary">Data profile</h2>
+              <span className="text-xs text-text-secondary">
                 computed from {data.profile.sampledRows.toLocaleString()} sampled rows
               </span>
             </div>
-            <div className="bg-white border border-border rounded-lg overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface">
               <table className="w-full text-small">
                 <thead>
-                  <tr className="border-b border-border text-left text-text-light">
+                  <tr className="border-b border-border-subtle bg-bg-elevated text-left text-text-secondary">
                     <th className="px-4 py-2 font-medium">Column</th>
                     <th className="px-4 py-2 font-medium">Type</th>
                     <th className="px-4 py-2 font-medium">Filled</th>
@@ -297,24 +322,24 @@ export default function ProductDetail() {
                 </thead>
                 <tbody>
                   {data.profile.columns.map((c) => (
-                    <tr key={c.name} className="border-b border-border last:border-0">
-                      <td className="px-4 py-2 font-mono text-text-dark">{c.name}</td>
+                    <tr key={c.name} className="border-b border-border-subtle last:border-0">
+                      <td className="px-4 py-2 font-mono text-text-primary">{c.name}</td>
                       <td className="px-4 py-2">
                         <span
                           className={`px-2 py-0.5 rounded text-xs ${
                             c.type === 'numeric'
-                              ? 'bg-primary/10 text-primary'
+                              ? 'bg-bg-elevated text-data-blue'
                               : c.type === 'categorical'
-                              ? 'bg-success/10 text-success'
-                              : 'bg-border text-text-light'
+                              ? 'bg-success-dim text-data-green'
+                              : 'bg-bg-elevated text-text-secondary'
                           }`}
                         >
                           {c.type}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-text-dark">{c.filledPercent}%</td>
-                      <td className="px-4 py-2 text-text-dark">{c.distinct.toLocaleString()}</td>
-                      <td className="px-4 py-2 text-text-light">
+                      <td className="px-4 py-2 text-text-primary">{c.filledPercent}%</td>
+                      <td className="px-4 py-2 text-text-primary">{c.distinct.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-text-secondary">
                         {c.type === 'numeric' && (
                           <span className="font-mono">
                             min {c.min} · max {c.max} · avg {c.avg}
@@ -334,11 +359,11 @@ export default function ProductDetail() {
           {/* Sample Data preview */}
           {data.sampleRows.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-section-title text-navy mb-6">Sample Data</h2>
-              <div className="bg-white border border-border rounded-lg overflow-x-auto">
+              <h2 className="mb-4 font-heading text-lg font-semibold text-text-primary">Sample data</h2>
+              <div className="overflow-x-auto rounded-xl border border-border-subtle bg-surface">
                 <table className="w-full text-small whitespace-nowrap">
                   <thead>
-                    <tr className="border-b border-border text-left text-text-light">
+                    <tr className="border-b border-border-subtle bg-bg-elevated text-left text-text-secondary">
                       {data.profile.columns.map((c) => (
                         <th key={c.name} className="px-4 py-2 font-medium font-mono">
                           {c.name}
@@ -348,9 +373,9 @@ export default function ProductDetail() {
                   </thead>
                   <tbody>
                     {data.sampleRows.map((row, i) => (
-                      <tr key={i} className="border-b border-border last:border-0">
+                      <tr key={i} className="border-b border-border-subtle last:border-0">
                         {data.profile.columns.map((c) => (
-                          <td key={c.name} className="px-4 py-2 text-text-dark">
+                          <td key={c.name} className="px-4 py-2 text-text-primary">
                             {row[c.name] === null || row[c.name] === undefined || row[c.name] === ''
                               ? '—'
                               : String(row[c.name])}
@@ -367,27 +392,27 @@ export default function ProductDetail() {
           {/* Usage Metrics */}
           <div className="mb-8">
             <div className="flex items-baseline justify-between mb-2">
-              <h2 className="text-section-title text-navy">Usage Metrics</h2>
-              <span className="text-small text-text-light">illustrative</span>
+              <h2 className="font-heading text-lg font-semibold text-text-primary">Demo activity</h2>
+              <span className="text-[10px] font-mono uppercase tracking-wide text-text-tertiary">illustrative</span>
             </div>
-            <p className="text-small text-text-light mb-6">
+            <p className="mb-6 text-xs text-text-secondary">
               Usage and the 30-day trend are illustrative — a real deployment populates them from
               query logs. Quality, the data profile, lineage, and the (editable) outcome below all
               reflect this dataset.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white border border-border rounded-lg p-4 text-center">
-                <p className="text-metric font-mono text-primary">{usage.queriesPerDay}</p>
-                <p className="text-small text-text-light mt-2">queries / day</p>
+              <div className="rounded-xl border border-border-subtle bg-surface p-4 text-center">
+                <p className="font-mono text-2xl text-data-blue">{usage.queriesPerDay}</p>
+                <p className="mt-2 text-xs text-text-secondary">queries / day</p>
               </div>
-              <div className="bg-white border border-border rounded-lg p-4 text-center">
-                <p className="text-metric font-mono text-primary">{usage.uniqueUsers}</p>
-                <p className="text-small text-text-light mt-2">unique users</p>
-                <p className="text-small text-text-light mt-1">{data.users}</p>
+              <div className="rounded-xl border border-border-subtle bg-surface p-4 text-center">
+                <p className="font-mono text-2xl text-data-blue">{usage.uniqueUsers}</p>
+                <p className="mt-2 text-xs text-text-secondary">unique users</p>
+                <p className="mt-1 text-xs text-text-secondary">{data.users}</p>
               </div>
-              <div className="bg-white border border-border rounded-lg p-4 text-center">
-                <p className="text-metric font-mono text-primary">{usage.adoptionPercent}%</p>
-                <p className="text-small text-text-light mt-2">org adoption</p>
+              <div className="rounded-xl border border-border-subtle bg-surface p-4 text-center">
+                <p className="font-mono text-2xl text-data-blue">{usage.adoptionPercent}%</p>
+                <p className="mt-2 text-xs text-text-secondary">org adoption</p>
               </div>
             </div>
             <TrendChart data={data.trendData} />
@@ -396,7 +421,7 @@ export default function ProductDetail() {
           {/* Outcome Tracking — user-owned, editable */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-section-title text-navy">Outcome Tracking</h2>
+              <h2 className="font-heading text-lg font-semibold text-text-primary">Outcome tracking</h2>
               {!editingOutcome && (
                 <Button variant="secondary" size="sm" onClick={startEditOutcome}>
                   Edit
@@ -405,7 +430,7 @@ export default function ProductDetail() {
             </div>
 
             {!editingOutcome ? (
-              <div className="bg-white border border-border rounded-lg p-6 space-y-4">
+              <div className="space-y-4 rounded-xl border border-border-subtle bg-surface p-5">
                 <div>
                   <p className="text-small text-text-light">Hypothesis</p>
                   <p className="text-body text-text-dark font-medium">{outcome.hypothesis || '—'}</p>
@@ -446,7 +471,7 @@ export default function ProductDetail() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white border border-border rounded-lg p-6 space-y-4">
+              <div className="space-y-4 rounded-xl border border-border-subtle bg-surface p-5">
                 <div>
                   <label className="text-small text-text-light block mb-1">Hypothesis</label>
                   <textarea
@@ -508,13 +533,22 @@ export default function ProductDetail() {
           </div>
 
           {/* Data Lineage */}
-          <div className="mb-8">
+          <div id="data-flow" className="mb-8 scroll-mt-6">
             <LineageFlow
               raw={data.lineage.raw}
-              etl={data.lineage.etl}
-              transform={data.lineage.transform}
-              dataset={data.lineage.dataset}
-              usage={data.lineage.usage}
+              etl={{
+                ...data.lineage.etl,
+                description: `${data.sourceType === 'postgres' ? 'PostgreSQL' : 'CSV'} connector · on ${data.sourceType === 'postgres' ? 'connect' : 'upload'} · stores ${data.profile.sampledRows.toLocaleString()} sample rows`,
+              }}
+              transform={{
+                ...data.lineage.transform,
+                description: `${data.profile.sampledRows.toLocaleString()} sampled rows · ${data.profile.columns.length} columns profiled`,
+              }}
+              dataset={{
+                ...data.lineage.dataset,
+                description: `Quality estimate ${Math.round((quality.freshness + quality.completeness + quality.accuracy) / 3)}% · ${data.metadata.rowCount.toLocaleString()} rows`,
+              }}
+              usage={{ ...data.lineage.usage, name: data.users }}
             />
           </div>
 
@@ -542,7 +576,15 @@ export default function ProductDetail() {
             )}
           </div>
         </div>
-      </div>
+      </main>
+      {chatOpen && (
+        <ChatPanel
+          key={data.id}
+          datasetId={data.id}
+          datasetName={data.name}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   )
 }

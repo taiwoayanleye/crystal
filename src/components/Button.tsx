@@ -22,8 +22,8 @@ export function Button({
   title,
 }: ButtonProps) {
   const variantClasses = {
-    primary: 'bg-primary text-white hover:opacity-90 focus:ring-primary',
-    secondary: 'bg-border text-text-dark hover:bg-gray-300 focus:ring-primary',
+    primary: 'bg-accent text-white hover:bg-accent-light focus:ring-accent',
+    secondary: 'bg-bg-elevated text-text-primary hover:bg-bg-hover focus:ring-accent',
     danger: 'bg-error text-white hover:opacity-90 focus:ring-error',
   }
 

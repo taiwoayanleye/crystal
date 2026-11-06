@@ -23,26 +23,26 @@ function Stage({
   description: string
 }) {
   return (
-    <div className="w-40 flex-shrink-0 p-4 bg-bg-subtle rounded-lg border border-border text-center">
-      <div className="text-small font-medium text-text-dark">
+    <div className="w-44 flex-shrink-0 rounded-lg border border-border-subtle bg-bg-elevated p-4 text-left">
+      <div className="text-[10px] font-mono font-medium uppercase tracking-wide text-text-tertiary">
         {icon} {label}
       </div>
-      <div className="text-small font-semibold text-navy mt-2 truncate" title={title}>
+      <div className="mt-3 truncate text-sm font-semibold text-text-primary" title={title}>
         {title}
       </div>
-      <div className="text-small text-text-light mt-1">{description}</div>
+      <div className="mt-1 text-xs leading-relaxed text-text-secondary">{description}</div>
     </div>
   )
 }
 
 export function LineageFlow({ raw, etl, transform, dataset, usage }: LineageFlowProps) {
-  const arrow = <div className="text-2xl text-text-light font-light flex-shrink-0">→</div>
+  const arrow = <div className="flex-shrink-0 self-center font-mono text-sm text-text-tertiary" aria-hidden="true">→</div>
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-border">
+    <div className="rounded-xl border border-border-subtle bg-surface p-5 sm:p-6">
       <div className="mb-5">
-        <h3 className="text-section-title text-navy">Data flow</h3>
-        <p className="text-small text-text-light mt-1">Observed source and Crystal processing steps. Downstream consumers are not connected yet.</p>
+        <h3 className="font-heading text-base font-semibold text-text-primary">Data flow</h3>
+        <p className="mt-1 text-xs text-text-secondary">Observed source and Crystal processing steps.</p>
       </div>
 
       <div className="overflow-x-auto pb-4">
@@ -56,15 +56,12 @@ export function LineageFlow({ raw, etl, transform, dataset, usage }: LineageFlow
           <Stage icon="📊" label="Data product" title={dataset.name} description={dataset.description} />
         </div>
       </div>
-      <div className="border-t border-border pt-4 mt-2">
-        <p className="text-small font-medium text-text-dark mb-2">👥 {usage.name}</p>
-        <div className="flex flex-wrap gap-2">
-          {usage.applications.map((person) => (
-            <span key={person} className="px-2.5 py-1 rounded-full bg-bg-subtle border border-border text-small text-text-dark">
-              {person}
-            </span>
-          ))}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-4">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-wide text-text-tertiary">Intended audience</p>
+          <p className="mt-1 text-xs font-medium text-text-primary">{usage.name}</p>
         </div>
+        <span className="rounded-md border border-border-subtle bg-bg-elevated px-2.5 py-1 font-mono text-[10px] text-text-secondary">Not connected</span>
       </div>
     </div>
   )

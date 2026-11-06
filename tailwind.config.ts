@@ -9,6 +9,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        'bg-base': '#FAFAFA',
+        surface: '#FFFFFF',
+        'bg-elevated': '#F3F3F3',
+        'bg-hover': '#EBEBEB',
+        'border-subtle': '#E8E8E8',
+        'border-default': '#D4D4D4',
+        'text-primary': '#0A0A0A',
+        'text-secondary': '#636363',
+        'text-tertiary': '#9CA3AF',
+        accent: '#0A0A0A',
+        'accent-light': '#333333',
+        'data-green': '#10B981',
+        'data-blue': '#3B82F6',
+        'data-amber': '#F59E0B',
+        'success-dim': '#E8F7F0',
+        'warning-dim': '#FFF5E5',
+        'error-dim': '#FDECEC',
         primary: '#0066FF',
         navy: '#001A4D',
         success: '#10B981',
@@ -25,6 +42,11 @@ const config: Config = {
             fontFamily: 'Inter, system-ui, sans-serif',
           },
         },
+      },
+      fontFamily: {
+        heading: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         'page-title': ['32px', { fontWeight: '700', lineHeight: '1.2' }],

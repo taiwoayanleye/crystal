@@ -1,5 +1,4 @@
 import { ProgressBar } from './ProgressBar'
-import { Button } from './Button'
 
 interface MetricCardProps {
   icon: string
@@ -17,7 +16,6 @@ interface MetricCardProps {
 }
 
 export function MetricCard({
-  icon,
   title,
   sourceType,
   rowCount,
@@ -31,75 +29,76 @@ export function MetricCard({
   onAsk,
 }: MetricCardProps) {
   const outcomeTracked = status !== 'Not started'
+  const snapshotDate = new Date(lastSyncAt)
 
   return (
-    <article className="group bg-white border border-border rounded-lg shadow-sm p-5 hover:shadow-md hover:border-primary/30 transition-smooth flex flex-col h-full">
-      <div className="flex items-start gap-3 mb-5">
-        <span className="w-10 h-10 rounded-md bg-bg-subtle flex items-center justify-center text-xl flex-shrink-0">{icon}</span>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base text-navy font-semibold leading-snug line-clamp-2" title={title}>{title}</h3>
-          <p className="text-xs text-text-light mt-1">
-            {sourceType === 'postgres' ? 'PostgreSQL' : 'CSV'} · {rowCount.toLocaleString()} rows · Snapshot {new Date(lastSyncAt).toLocaleDateString()}
+    <article className="flex h-full flex-col rounded-xl border border-border-subtle bg-surface transition-smooth hover:border-border-default hover:shadow-sm">
+      <div className="flex items-start justify-between gap-4 px-5 pt-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-text-primary" title={title}>{title}</h2>
+          <p className="mt-1 truncate font-mono text-[11px] text-text-tertiary">
+            {sourceType === 'postgres' ? 'PostgreSQL' : 'CSV'} <span aria-hidden="true">--</span> {rowCount.toLocaleString()} rows <span aria-hidden="true">--</span> {snapshotDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
+        <span className="shrink-0 font-mono text-2xl font-medium leading-none text-data-green" title="Calculated quality score; includes heuristic estimates">
+          {qualityScore}%
+        </span>
       </div>
 
-      <div className="space-y-3">
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-small text-text-dark font-medium">Quality</span>
-            <span className="text-small font-mono font-bold text-success">{qualityScore}%</span>
-          </div>
-          <ProgressBar value={qualityScore} color="success" />
-        </div>
+      <div className="space-y-2.5 px-5 py-4">
+        <Metric label="Quality" value={`${qualityScore}%`} progress={qualityScore} color="success" />
+        <Metric label="Demo activity index" value={`${usageScore}%`} progress={usageScore} color="primary" />
+        <Metric
+          label="Outcome"
+          value={outcomeTracked ? `${outcomeScore}/100` : 'Not started'}
+          progress={outcomeTracked ? outcomeScore : undefined}
+          color={outcomeScore > 50 ? 'success' : 'warning'}
+        />
+      </div>
 
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-small text-text-dark font-medium">Demo activity index</span>
-            <span className="text-small font-mono font-bold text-text-light">{usageScore}%</span>
-          </div>
-          <ProgressBar value={usageScore} color="primary" />
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-small text-text-dark font-medium">Outcome</span>
-            <span
-              className={`text-small font-mono font-bold ${
-                !outcomeTracked ? 'text-text-light' : outcomeScore > 50 ? 'text-success' : 'text-warning'
-              }`}
-            >
-              {outcomeTracked ? `${outcomeScore}/100` : 'Not started'}
-            </span>
-          </div>
-          {outcomeTracked ? (
-            <ProgressBar value={outcomeScore} color={outcomeScore > 50 ? 'success' : 'warning'} />
-          ) : (
-            <div className="h-1.5 rounded-sm bg-bg-subtle" aria-hidden="true" />
+      <footer className="mt-auto flex min-h-[68px] items-center justify-between gap-3 rounded-b-xl bg-bg-elevated px-5 py-3">
+        <p className="flex min-w-0 items-center gap-2 text-xs text-text-secondary" title={hypothesis}>
+          <svg className="shrink-0 text-text-tertiary" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4M8.2 14.5a6.5 6.5 0 1 1 7.6 0c-.9.6-1.3 1.4-1.5 2.5h-4.6c-.2-1.1-.6-1.9-1.5-2.5z" /></svg>
+          <span className="truncate">{hypothesis || 'No outcome hypothesis added'}</span>
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={onViewDetails} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-light">
+            View <span aria-hidden="true">→</span>
+          </button>
+          {onAsk && (
+            <button type="button" onClick={onAsk} className="inline-flex items-center gap-2 rounded-lg bg-bg-hover px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-border-default" aria-label={`Ask about ${title}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z" /></svg>
+              Ask
+            </button>
           )}
         </div>
-      </div>
-
-      <div className="border-t border-border pt-3 mt-4 flex-1">
-        <div className="flex gap-2">
-          <span className="text-base flex-shrink-0">💡</span>
-          <div className="min-w-0">
-            <p className="text-small text-text-dark line-clamp-2">{hypothesis}</p>
-            <p className="text-small text-text-light mt-1">Outcome status: {status}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button variant="primary" size="sm" onClick={onViewDetails} className="flex-1">
-          View Details
-        </Button>
-        {onAsk && (
-          <Button variant="secondary" size="sm" onClick={onAsk} title="Ask Claude">
-            💬 Ask
-          </Button>
-        )}
-      </div>
+      </footer>
     </article>
+  )
+}
+
+function Metric({
+  label,
+  value,
+  progress,
+  color,
+}: {
+  label: string
+  value: string
+  progress?: number
+  color: 'success' | 'primary' | 'warning'
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <span className="text-[11px] text-text-secondary">{label}</span>
+        <span className="font-mono text-[10px] tabular-nums text-text-secondary">{value}</span>
+      </div>
+      {progress === undefined ? (
+        <div className="h-1 rounded-sm bg-bg-elevated" aria-hidden="true" />
+      ) : (
+        <ProgressBar value={progress} color={color} />
+      )}
+    </div>
   )
 }

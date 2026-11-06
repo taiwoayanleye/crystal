@@ -4,6 +4,20 @@
 
 /* Design System Tokens */
 :root {
+  --color-bg-base: #FAFAFA;
+  --color-surface: #FFFFFF;
+  --color-bg-elevated: #F3F3F3;
+  --color-bg-hover: #EBEBEB;
+  --color-border-subtle: #E8E8E8;
+  --color-border-default: #D4D4D4;
+  --color-text-primary: #0A0A0A;
+  --color-text-secondary: #636363;
+  --color-text-tertiary: #9CA3AF;
+  --color-accent: #0A0A0A;
+  --color-accent-light: #333333;
+  --color-data-green: #10B981;
+  --color-data-blue: #3B82F6;
+  --color-data-amber: #F59E0B;
   --color-primary: #0066FF;
   --color-navy: #001A4D;
   --color-success: #10B981;
@@ -44,8 +58,8 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--color-white);
-  color: var(--color-text-dark);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
   font-size: var(--font-size-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -64,11 +78,11 @@ html {
 /* Component styles */
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-primary text-white rounded-md font-medium transition-all duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+    @apply px-4 py-2 bg-accent text-white rounded-md font-medium transition-all duration-150 hover:bg-accent-light focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-gray-200 text-text-dark rounded-md font-medium transition-all duration-150 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-primary;
+    @apply px-4 py-2 bg-bg-elevated text-text-primary rounded-md font-medium transition-all duration-150 hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-accent;
   }
 
   .btn-danger {

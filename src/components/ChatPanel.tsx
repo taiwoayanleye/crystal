@@ -34,10 +34,12 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [minimized, setMinimized] = useState(false)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const container = messagesContainerRef.current
+    if (container) container.scrollTop = container.scrollHeight
   }, [messages, loading])
 
   const send = async (text: string) => {
@@ -90,38 +92,31 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
   const showSuggestions = messages.length === 1 && !loading
 
   return (
-    <section aria-label="Data assistant" className="fixed inset-x-0 bottom-0 z-40 h-[min(78vh,680px)] bg-white border border-border shadow-lg rounded-t-xl flex flex-col md:static md:inset-auto md:z-auto md:h-auto md:w-[380px] md:flex-shrink-0 md:rounded-none md:border-y-0 md:border-r-0 md:border-l md:shadow-none">
-      <div className="border-b border-border p-4 flex justify-between items-center">
+    <section aria-label="Data assistant" className={`fixed inset-x-0 bottom-0 z-40 ${minimized ? 'h-auto' : 'h-[min(78vh,680px)]'} rounded-t-xl border border-border-subtle bg-bg-base shadow-lg md:static md:inset-auto md:z-auto md:w-[360px] md:flex-shrink-0 md:rounded-none md:border-y-0 md:border-r-0 md:border-l md:shadow-none ${minimized ? 'md:h-auto' : 'md:h-auto'}`}>
+      <div className="flex items-center justify-between border-b border-border-subtle bg-bg-elevated px-4 py-3">
         <div className="min-w-0">
-          <h2 className="text-section-title text-navy font-semibold">Data Assistant</h2>
+          <h2 className="font-heading text-sm font-semibold text-text-primary">Data Assistant</h2>
           {datasetName && (
-            <p className="text-small text-text-light truncate" title={datasetName}>
+            <p className="truncate text-[11px] text-text-secondary" title={datasetName}>
               {datasetName}
             </p>
           )}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Close assistant"
-          className="text-text-light hover:text-text-dark transition-smooth text-xl leading-none px-1"
-        >
-          ×
-        </button>
+        <div className="ml-3 flex items-center gap-1">
+          <button type="button" onClick={() => setMinimized((value) => !value)} aria-label={minimized ? 'Expand assistant' : 'Minimize assistant'} className="rounded p-1.5 text-text-secondary hover:bg-bg-hover">{minimized ? '□' : '−'}</button>
+          <button type="button" onClick={onClose} aria-label="Close assistant" className="rounded p-1.5 text-text-secondary hover:bg-bg-hover">×</button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {!minimized && <>
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-[85%] px-4 py-2 rounded-lg text-small whitespace-pre-wrap ${
-                message.role === 'user'
-                  ? 'bg-primary text-white rounded-br-none'
-                  : 'bg-bg-subtle text-text-dark rounded-bl-none'
-              }`}
-            >
+            {message.role === 'assistant' && <span aria-hidden="true" className="mr-2 mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] text-white">✦</span>}
+            <div className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3.5 py-2.5 text-xs leading-5 ${message.role === 'user' ? 'rounded-br-sm bg-accent text-white' : 'rounded-bl-sm bg-bg-elevated text-text-primary'}`}>
               {message.content}
             </div>
           </div>
@@ -129,7 +124,7 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-bg-subtle px-4 py-2 rounded-lg rounded-bl-none">
+            <div className="rounded-lg rounded-bl-sm bg-bg-elevated px-4 py-2">
               <span className="inline-flex gap-1">
                 <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
                 <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></span>
@@ -145,7 +140,7 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
               <button
                 key={s}
                 onClick={() => send(s)}
-                className="block w-full text-left text-small text-primary border border-border hover:border-primary rounded-md px-3 py-2 transition-smooth"
+                className="block w-full rounded-md bg-bg-elevated px-3 py-2 text-left text-xs text-text-primary transition-smooth hover:bg-bg-hover"
               >
                 {s}
               </button>
@@ -153,10 +148,9 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
           </div>
         )}
 
-        <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border-subtle bg-surface p-3.5">
         <div className="flex gap-2">
           <input
             type="text"
@@ -165,19 +159,20 @@ export function ChatPanel({ datasetId, datasetName, onClose }: ChatPanelProps) {
             onKeyDown={(e) => e.key === 'Enter' && send(input)}
             aria-label="Ask about this dataset"
             placeholder="Ask about this dataset…"
-            className="flex-1 px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary"
+            className="min-w-0 flex-1 rounded-md bg-bg-elevated px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
             disabled={loading}
           />
           <button
             onClick={() => send(input)}
             disabled={loading || !input.trim()}
             aria-label="Send"
-            className="px-3 py-2 bg-primary text-white rounded-md hover:opacity-90 disabled:opacity-50 transition-smooth"
+            className="rounded-md bg-accent px-3 py-2 text-white transition-smooth hover:bg-accent-light disabled:opacity-50"
           >
             →
           </button>
         </div>
       </div>
+      </>}
     </section>
   )
 }

@@ -7,9 +7,9 @@ interface ProgressBarProps {
 
 export function ProgressBar({ value, color = 'success', height = 'sm', label }: ProgressBarProps) {
   const colorMap = {
-    success: 'bg-success',
-    primary: 'bg-primary',
-    warning: 'bg-warning',
+    success: 'bg-data-green',
+    primary: 'bg-data-blue',
+    warning: 'bg-data-amber',
     error: 'bg-error',
   }
 
