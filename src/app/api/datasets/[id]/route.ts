@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDataset, getDatasetRows, deleteDataset } from '@/lib/database'
 import { getTrendData, getUsageMetrics } from '@/lib/metrics'
+import { computeProfile } from '@/lib/profile'
 
 /**
  * GET /api/datasets/[id]
@@ -18,7 +19,10 @@ export async function GET(
       return NextResponse.json({ error: 'Dataset not found' }, { status: 404 })
     }
 
-    const sampleRows = await getDatasetRows(id, 5)
+    // Profile over the full stored sample; preview shows the first rows.
+    const sampledRows = await getDatasetRows(id, 500)
+    const profile = computeProfile(sampledRows, dataset.schema)
+    const sampleRows = sampledRows.slice(0, 8)
     const usage = getUsageMetrics(id, dataset.metrics.usageCount)
     const trendData = getTrendData(id)
 
@@ -55,6 +59,7 @@ export async function GET(
       },
       trendData,
       sampleRows,
+      profile,
       lineage: {
         raw: {
           name: 'S3 CSV',

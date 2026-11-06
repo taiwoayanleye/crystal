@@ -30,6 +30,20 @@ interface DetailData {
     outcome: { hypothesis: string; status: string; businessImpact: string; outcomeScore: number }
   }
   trendData: Array<{ date: string; count: number }>
+  sampleRows: Record<string, any>[]
+  profile: {
+    sampledRows: number
+    columns: Array<{
+      name: string
+      type: 'numeric' | 'categorical' | 'empty'
+      filledPercent: number
+      distinct: number
+      min?: number
+      max?: number
+      avg?: number
+      top?: Array<{ value: string; count: number }>
+    }>
+  }
   lineage: {
     raw: LineageNode
     etl: LineageNode
@@ -203,9 +217,105 @@ export default function ProductDetail() {
             </div>
           </div>
 
+          {/* Data Profile — computed from the real sampled rows */}
+          <div className="mb-8">
+            <div className="flex items-baseline justify-between mb-6">
+              <h2 className="text-section-title text-navy">Data Profile</h2>
+              <span className="text-small text-text-light">
+                computed from {data.profile.sampledRows.toLocaleString()} sampled rows
+              </span>
+            </div>
+            <div className="bg-white border border-border rounded-lg overflow-x-auto">
+              <table className="w-full text-small">
+                <thead>
+                  <tr className="border-b border-border text-left text-text-light">
+                    <th className="px-4 py-2 font-medium">Column</th>
+                    <th className="px-4 py-2 font-medium">Type</th>
+                    <th className="px-4 py-2 font-medium">Filled</th>
+                    <th className="px-4 py-2 font-medium">Distinct</th>
+                    <th className="px-4 py-2 font-medium">Summary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.profile.columns.map((c) => (
+                    <tr key={c.name} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2 font-mono text-text-dark">{c.name}</td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs ${
+                            c.type === 'numeric'
+                              ? 'bg-primary/10 text-primary'
+                              : c.type === 'categorical'
+                              ? 'bg-success/10 text-success'
+                              : 'bg-border text-text-light'
+                          }`}
+                        >
+                          {c.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-text-dark">{c.filledPercent}%</td>
+                      <td className="px-4 py-2 text-text-dark">{c.distinct.toLocaleString()}</td>
+                      <td className="px-4 py-2 text-text-light">
+                        {c.type === 'numeric' && (
+                          <span className="font-mono">
+                            min {c.min} · max {c.max} · avg {c.avg}
+                          </span>
+                        )}
+                        {c.type === 'categorical' &&
+                          c.top?.map((t) => `${t.value} (${t.count})`).join(' · ')}
+                        {c.type === 'empty' && '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sample Data preview */}
+          {data.sampleRows.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-section-title text-navy mb-6">Sample Data</h2>
+              <div className="bg-white border border-border rounded-lg overflow-x-auto">
+                <table className="w-full text-small whitespace-nowrap">
+                  <thead>
+                    <tr className="border-b border-border text-left text-text-light">
+                      {data.profile.columns.map((c) => (
+                        <th key={c.name} className="px-4 py-2 font-medium font-mono">
+                          {c.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.sampleRows.map((row, i) => (
+                      <tr key={i} className="border-b border-border last:border-0">
+                        {data.profile.columns.map((c) => (
+                          <td key={c.name} className="px-4 py-2 text-text-dark">
+                            {row[c.name] === null || row[c.name] === undefined || row[c.name] === ''
+                              ? '—'
+                              : String(row[c.name])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Usage Metrics */}
           <div className="mb-8">
-            <h2 className="text-section-title text-navy mb-6">Usage Metrics</h2>
+            <div className="flex items-baseline justify-between mb-2">
+              <h2 className="text-section-title text-navy">Usage Metrics</h2>
+              <span className="text-small text-text-light">illustrative</span>
+            </div>
+            <p className="text-small text-text-light mb-6">
+              Usage, the trend, outcome, and lineage below are illustrative placeholders — a real
+              deployment populates them from query logs and outcome tracking. Quality and the data
+              profile above are computed from your actual data.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white border border-border rounded-lg p-4 text-center">
                 <p className="text-metric font-mono text-primary">{usage.queriesPerDay}</p>
