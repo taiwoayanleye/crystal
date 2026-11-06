@@ -20,6 +20,7 @@ interface DatasetRow {
   name: string
   icon: string
   source_type: 'csv' | 'postgres'
+  success_metrics: string[]
   problem_statement: string
   users: string
   schema: string[]
@@ -87,6 +88,7 @@ async function bootstrap(): Promise<void> {
   `
   // Added after initial release; keep existing rows working.
   await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'csv'`
+  await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS success_metrics JSONB NOT NULL DEFAULT '[]'::jsonb`
   const [{ count }] = (await sql`SELECT count(*)::int AS count FROM datasets`) as { count: number }[]
   if (count === 0) await seed()
 }
@@ -95,6 +97,7 @@ async function insertDataset(d: {
   id: string
   name: string
   sourceType?: 'csv' | 'postgres'
+  successMetrics?: string[]
   problemStatement: string
   users: string
   schema: string[]
@@ -110,9 +113,10 @@ async function insertDataset(d: {
   const updated = d.updatedAt ?? created
   await sql`
     INSERT INTO datasets
-      (id, name, icon, source_type, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at)
+      (id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at)
     VALUES (
-      ${d.id}, ${d.name}, ${iconFor(d.id)}, ${d.sourceType ?? 'csv'}, ${d.problemStatement}, ${d.users},
+      ${d.id}, ${d.name}, ${iconFor(d.id)}, ${d.sourceType ?? 'csv'}, ${JSON.stringify(d.successMetrics ?? [])},
+      ${d.problemStatement}, ${d.users},
       ${JSON.stringify(d.schema)}, ${JSON.stringify(d.metadata)},
       ${JSON.stringify(d.quality)}, ${JSON.stringify(d.outcome)},
       ${JSON.stringify(d.rows)}, 0, ${created}, ${updated}
@@ -195,6 +199,7 @@ function toDataset(r: DatasetRow): Dataset {
     metadata: r.metadata,
     quality: r.quality,
     outcome: r.outcome,
+    successMetrics: r.success_metrics ?? [],
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   }
@@ -219,6 +224,7 @@ function toWithMetrics(r: DatasetRow): DatasetWithMetrics {
 export async function saveDataset(input: {
   name: string
   sourceType?: 'csv' | 'postgres'
+  successMetrics?: string[]
   problemStatement: string
   users: string
   schema: string[]
@@ -232,6 +238,7 @@ export async function saveDataset(input: {
     id,
     name: input.name,
     sourceType: input.sourceType ?? 'csv',
+    successMetrics: input.successMetrics ?? [],
     problemStatement: input.problemStatement,
     users: input.users,
     schema: input.schema,
@@ -262,7 +269,7 @@ export async function updateOutcome(id: string, outcome: OutcomeMetrics): Promis
 // All columns except the heavy `rows` JSONB, which list/detail never use
 // (only getDatasetRows needs it). Keeping it out avoids shipping hundreds of
 // sample rows over Neon's HTTP driver on every list/detail read.
-const COLS = `id, name, icon, source_type, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at`
+const COLS = `id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at`
 
 export async function getAllDatasets(): Promise<DatasetWithMetrics[]> {
   await ensureReady()

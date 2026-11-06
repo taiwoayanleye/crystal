@@ -113,6 +113,78 @@ Provide a concise, actionable insight based on this data. Keep responses to 2-3 
   }
 }
 
+export interface SuggestedMetric {
+  name: string
+  description: string
+}
+
+/**
+ * Ask Claude to inspect a dataset's schema + sample and propose specific,
+ * measurable success metrics tailored to the actual columns.
+ */
+export async function suggestSuccessMetrics(input: {
+  schema: string[]
+  sampleRows: Record<string, any>[]
+  problemStatement?: string
+}): Promise<SuggestedMetric[]> {
+  if (!ANTHROPIC_API_KEY) {
+    // Honest fallback when no key is configured.
+    return [
+      { name: 'Adoption', description: '% of target users actively querying the dataset' },
+      { name: 'Query volume', description: 'Queries per week against the dataset' },
+      { name: 'Business impact', description: 'Revenue or cost outcome attributed to decisions from this data' },
+    ]
+  }
+
+  const system = `You are a data-product analyst. Given a dataset's columns, a sample of rows, and the problem it should solve, propose 4 SPECIFIC, measurable success metrics for treating it as a data product.
+
+Rules:
+- Be specific to the actual columns present (reference them), not generic.
+- Each metric must be measurable and tied to a business or data outcome.
+- Return ONLY a JSON array of objects: [{"name": string, "description": string}]. No prose, no markdown.`
+
+  const user = `Problem: ${input.problemStatement || '(not specified)'}
+
+Columns: ${input.schema.join(', ')}
+
+Sample rows (JSON):
+${JSON.stringify(input.sampleRows.slice(0, 15), null, 2)}`
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-5-5',
+      max_tokens: 1024,
+      system,
+      messages: [{ role: 'user', content: user }],
+    }),
+  })
+
+  if (!response.ok) throw new Error(`Claude API error: ${response.status}`)
+  const data = (await response.json()) as ClaudeResponse
+  const text = data.content.find((c) => c.type === 'text')?.text ?? '[]'
+
+  // Be forgiving: extract the first JSON array from the response.
+  const match = text.match(/\[[\s\S]*\]/)
+  try {
+    const parsed = JSON.parse(match ? match[0] : text)
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter((m) => m && typeof m.name === 'string')
+        .slice(0, 6)
+        .map((m) => ({ name: String(m.name), description: String(m.description ?? '') }))
+    }
+  } catch {
+    /* fall through */
+  }
+  return []
+}
+
 /**
  * Stream a message to Claude (for real-time responses)
  */

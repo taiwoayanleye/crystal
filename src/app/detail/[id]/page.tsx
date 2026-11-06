@@ -24,6 +24,7 @@ interface DetailData {
   users: string
   metadata: { rowCount: number; columnCount: number }
   schema: string[]
+  successMetrics: string[]
   metrics: {
     quality: { freshness: number; completeness: number; accuracy: number }
     usage: { queriesPerDay: number; uniqueUsers: number; adoptionPercent: number }
@@ -401,6 +402,19 @@ export default function ProductDetail() {
                     <p className="text-body text-text-dark font-medium">{outcome.businessImpact}</p>
                   </div>
                 </div>
+                {data.successMetrics.length > 0 && (
+                  <div>
+                    <p className="text-small text-text-light mb-2">Success metrics</p>
+                    <ul className="space-y-1">
+                      {data.successMetrics.map((m) => (
+                        <li key={m} className="text-small text-text-dark flex gap-2">
+                          <span className="text-success">✓</span>
+                          <span>{m}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div>
                   <p className="text-small text-text-light mb-2">
                     Outcome Score — {outcome.outcomeScore}/100

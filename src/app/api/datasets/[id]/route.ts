@@ -62,6 +62,7 @@ export async function GET(
       users: dataset.users,
       schema: dataset.schema,
       metadata: dataset.metadata,
+      successMetrics: dataset.successMetrics,
       metrics: {
         quality: dataset.quality,
         usage,

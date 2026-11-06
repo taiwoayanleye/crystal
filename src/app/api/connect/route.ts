@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sourceType, problemStatement, users, connection } = body
+    const { sourceType, problemStatement, users, connection, successMetrics } = body
 
     if (sourceType !== 'postgres') {
       return NextResponse.json(
@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
       metadata: { rowCount: result.rowCount, columnCount: result.schema.length },
       quality,
       rows: result.rows,
+      successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
     })
 
     return NextResponse.json(

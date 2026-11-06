@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
     const problemStatement = (formData.get('problemStatement') as string) || 'Dataset analysis'
     const users = (formData.get('users') as string) || 'Data team'
+    let successMetrics: string[] = []
+    try {
+      const raw = formData.get('successMetrics') as string | null
+      if (raw) successMetrics = JSON.parse(raw)
+    } catch {
+      successMetrics = []
+    }
 
     // Validate file
     if (!file) {
@@ -47,6 +54,7 @@ export async function POST(request: NextRequest) {
       metadata,
       quality,
       rows,
+      successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
     })
 
     const response: UploadResponse = {

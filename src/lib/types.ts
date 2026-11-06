@@ -29,6 +29,7 @@ export interface Dataset {
   }
   quality: QualityMetrics
   outcome: OutcomeMetrics
+  successMetrics: string[]
   createdAt: string
   updatedAt: string
 }

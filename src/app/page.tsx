@@ -59,6 +59,7 @@ export default function Dashboard() {
           sourceType: 'postgres',
           problemStatement: form.problemStatement,
           users: form.users,
+          successMetrics: form.successMetrics,
           connection: {
             ...form.connection,
             port: Number(form.connection.port) || 5432,
@@ -70,6 +71,7 @@ export default function Dashboard() {
       if (form.file) data.append('file', form.file)
       data.append('problemStatement', form.problemStatement)
       data.append('users', form.users)
+      data.append('successMetrics', JSON.stringify(form.successMetrics))
       response = await fetch('/api/upload', { method: 'POST', body: data })
     }
 
