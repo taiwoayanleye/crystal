@@ -6,6 +6,12 @@ Both Codex and Claude Code must read this file with `AGENTS.md` before significa
 
 _Last updated: 2026-11-06 by Codex (implemented the V2 interface from the Pencil source)._
 
+## Completed — Homepage route from the V2 design (2026-11-06)
+
+The V2 `Homepage` frame (`PvWu6`) is implemented at `/`. It provides the Crystal wordmark, Docs/GitHub/Changelog links, hero headline and description, Dashboard and Docs calls to action, and a portfolio snapshot. The three snapshot values are derived from `/api/datasets` (count, average quality estimate, and total rows), rather than hard-coded. The portfolio dashboard now lives at `/dashboard`; dashboard cards still open `/detail/[id]`, and detail-page return/add actions now route back to `/dashboard`.
+
+Validation: local browser review confirmed the homepage layout, populated portfolio stats, and navigation to `/dashboard`; `npx tsc --noEmit` passed. No tests were run. Changed files: `src/app/page.tsx`, `src/app/dashboard/page.tsx`, `src/app/detail/[id]/page.tsx`, `src/app/layout.tsx`, and this handoff.
+
 ## Current project status
 
 Crystal is an implemented, deployed Next.js 14 (App Router) data-as-a-product dashboard backed by Neon Postgres.
@@ -123,7 +129,7 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Next recommended step
 
-Review the V2 interface at mobile and tablet widths, especially the sidebar replacement, five-item portfolio strip, and assistant panel. Keep outcome tracking manual and usage/activity illustrative until real event sources exist. The current code changes are uncommitted.
+Review the V2 interface at mobile and tablet widths, especially the sidebar replacement, five-item portfolio strip, and assistant panel. Keep outcome tracking manual and usage/activity illustrative until real event sources exist.
 
 ### Separately (product backlog, not the design task)
 

@@ -177,7 +177,7 @@ export default function ProductDetail() {
     try {
       const res = await fetch(`/api/datasets/${datasetId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Delete failed')
-      router.push('/')
+      router.push('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
       setDeleting(false)
@@ -191,11 +191,11 @@ export default function ProductDetail() {
       activeDatasetId={datasetId}
       activeSection="data-products"
       onSelectDataset={(id) => router.push(`/detail/${id}`)}
-      onDashboard={() => router.push('/')}
+      onDashboard={() => router.push('/dashboard')}
       onDataProducts={() => router.push(`/detail/${datasetId}`)}
       onLineage={() => document.getElementById('data-flow')?.scrollIntoView({ behavior: 'smooth' })}
       onAskDataset={() => setChatOpen(true)}
-      onAddDataset={() => router.push('/?add=1')}
+      onAddDataset={() => router.push('/dashboard?add=1')}
     />
   )
 
@@ -220,7 +220,7 @@ export default function ProductDetail() {
         <main className="flex min-w-0 flex-1 items-center justify-center">
           <div className="text-center">
             <p className="mb-4 text-sm text-error">{error}</p>
-            <Button variant="primary" onClick={() => router.push('/')}>
+            <Button variant="primary" onClick={() => router.push('/dashboard')}>
               Back to dashboard
             </Button>
           </div>
@@ -239,7 +239,7 @@ export default function ProductDetail() {
           {/* Header */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <button type="button" onClick={() => router.push('/')} className="mb-2 text-[11px] text-text-tertiary hover:text-text-primary">← Dashboard</button>
+                <button type="button" onClick={() => router.push('/dashboard')} className="mb-2 text-[11px] text-text-tertiary hover:text-text-primary">← Dashboard</button>
                 <h1 className="flex items-center gap-3 font-heading text-2xl font-semibold tracking-tight text-text-primary sm:text-[26px]">
                   <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-bg-elevated text-xl">{data.icon}</span>
                   <span className="truncate">{data.name}</span>
@@ -556,7 +556,7 @@ export default function ProductDetail() {
           <div className="flex items-center gap-4 mb-8">
             {!confirmingDelete ? (
               <>
-                <Button variant="secondary" onClick={() => router.push('/')}>
+                <Button variant="secondary" onClick={() => router.push('/dashboard')}>
                   Back
                 </Button>
                 <Button variant="danger" onClick={() => setConfirmingDelete(true)}>

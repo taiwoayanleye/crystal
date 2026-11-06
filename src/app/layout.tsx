@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import '@/styles/globals.css'
 
 export const metadata: Metadata = {
-  title: 'Crystal — Data-as-a-Product Dashboard',
-  description: 'Measure whether your datasets create business value',
+  title: 'Crystal — Data-as-a-Product Platform',
+  description: 'Treat data like a product with quality signals, outcome tracking, and source lineage.',
 }
 
 export default function RootLayout({
