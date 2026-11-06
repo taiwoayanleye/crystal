@@ -17,6 +17,8 @@ export interface IngestResult {
   rows: Record<string, any>[]
   /** Total row count in the source (may exceed the sampled rows). */
   rowCount: number
+  /** Time the source snapshot was successfully read. */
+  lastSyncAt: string
 }
 
 export interface IDataConnector {

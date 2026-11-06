@@ -32,6 +32,7 @@ export interface Dataset {
   successMetrics: string[]
   createdAt: string
   updatedAt: string
+  lastSyncAt: string
 }
 
 export interface DatasetMetrics {

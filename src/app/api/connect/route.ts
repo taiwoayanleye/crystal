@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { saveDataset } from '@/lib/database'
-import { calculateQualityMetrics } from '@/lib/metrics'
-import { PostgresConnector, PostgresConfig } from '@/lib/connectors/postgres'
-import { IDataConnector } from '@/lib/connectors/types'
+import { getConnector } from '@/lib/connectors'
+import { PostgresConfig } from '@/lib/connectors/postgres'
+import { saveIngestResult } from '@/lib/ingestion'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const connector: IDataConnector = new PostgresConnector(cfg)
+    const connector = getConnector('postgres', cfg)
 
     // Pull schema + sample + total count.
     const result = await connector.ingest(500)
@@ -39,18 +38,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
     }
 
-    const quality = calculateQualityMetrics(result.rows, result.schema)
-
-    const datasetId = await saveDataset({
-      name: (typeof name === 'string' && name.trim()) || result.name,
+    const { datasetId } = await saveIngestResult({
+      result,
+      sourceType: connector.sourceType,
+      name: typeof name === 'string' ? name : undefined,
       icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
-      sourceType: 'postgres',
       problemStatement: problemStatement || `PostgreSQL table: ${result.name}`,
       users: users || 'Data team',
-      schema: result.schema,
-      metadata: { rowCount: result.rowCount, columnCount: result.schema.length },
-      quality,
-      rows: result.rows,
       successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
     })
 

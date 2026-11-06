@@ -25,8 +25,10 @@ export async function GET() {
       outcomeScore: dataset.outcome.outcomeScore,
       hypothesis: dataset.outcome.hypothesis,
       status: dataset.outcome.status,
+      sourceType: dataset.sourceType,
       createdAt: dataset.createdAt,
       updatedAt: dataset.updatedAt,
+      lastSyncAt: dataset.lastSyncAt,
       rowCount: dataset.metadata.rowCount,
       columnCount: dataset.metadata.columnCount,
     }))

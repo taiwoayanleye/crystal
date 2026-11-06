@@ -60,6 +60,8 @@ export async function GET(
       icon: dataset.icon,
       problemStatement: dataset.problemStatement,
       users: dataset.users,
+      sourceType: dataset.sourceType,
+      lastSyncAt: dataset.lastSyncAt,
       schema: dataset.schema,
       metadata: dataset.metadata,
       successMetrics: dataset.successMetrics,

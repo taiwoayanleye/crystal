@@ -54,6 +54,8 @@ interface DetailData {
   }
   createdAt: string
   updatedAt: string
+  sourceType: 'csv' | 'postgres'
+  lastSyncAt: string
 }
 
 function qualityColor(value: number): 'success' | 'warning' | 'error' {
@@ -222,7 +224,7 @@ export default function ProductDetail() {
 
           {/* Metadata */}
           <div className="bg-bg-subtle rounded-lg p-6 mb-8 border border-border">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
                 <p className="text-small text-text-light mb-1">Owner</p>
                 <p className="text-body text-text-dark font-medium">{data.users}</p>
@@ -234,15 +236,21 @@ export default function ProductDetail() {
                 </p>
               </div>
               <div>
+                <p className="text-small text-text-light mb-1">Source</p>
+                <p className="text-body text-text-dark font-medium">
+                  {data.sourceType === 'postgres' ? 'PostgreSQL' : 'CSV upload'}
+                </p>
+              </div>
+              <div>
                 <p className="text-small text-text-light mb-1">Created</p>
                 <p className="text-body text-text-dark font-medium">
                   {new Date(data.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <div>
-                <p className="text-small text-text-light mb-1">Last Updated</p>
+                <p className="text-small text-text-light mb-1">Last synced</p>
                 <p className="text-body text-text-dark font-medium">
-                  {new Date(data.updatedAt).toLocaleDateString()}
+                  {new Date(data.lastSyncAt).toLocaleString()}
                 </p>
               </div>
             </div>

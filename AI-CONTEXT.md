@@ -16,6 +16,13 @@ Crystal is an implemented, deployed Next.js 14 (App Router) data-as-a-product da
 
 ## In progress (uncommitted or just-committed in this change)
 
+TAI-25 and the requested TAI-26 follow-on are implemented in the current working tree, not yet committed or deployed:
+
+- CSV upload now uses `CsvConnector` from the shared connector factory; CSV and PostgreSQL results share one `saveIngestResult` path and the same quality-metric calculation over the capped sample.
+- Dataset source type and last successful snapshot time are normalized on the dataset record. `last_sync_at` is an additive migration; existing rows are backfilled from `created_at`. Dataset detail displays source and last-synced time.
+- Usage counters and outcome records remain source-agnostic. Usage/trend display values remain illustrative and outcome values remain user-owned, consistent with existing product semantics.
+- `npm run build` passes. No test suite was run. `design/crystal.pen` has a separate pre-existing working-tree modification and was left untouched.
+
 The AI-assisted upload flow — previously flagged here as "inferred from the diff, needs validation" — is now **implemented and validated**, and extended with AI name/emoji suggestion:
 
 - `POST /api/analyze` returns a full analysis for a CSV schema + sample: `{ name, icon, problemStatement, users, metrics[] }`.
@@ -24,7 +31,7 @@ The AI-assisted upload flow — previously flagged here as "inferred from the di
 - CSV (`/api/upload`) and PostgreSQL (`/api/connect`) both accept `name` + `icon` overrides; `saveDataset` uses the provided icon or falls back to a deterministic one.
 - One-off data fix: the previously filename-named Telco dataset (`dataset_1793973348070`) was renamed in the DB to "Telco Customer Churn" / 📉 for dashboard consistency.
 
-Validation run this session: `npx tsc --noEmit` clean; `npx vitest run` = 20 passing; `npx next build` compiles; `/api/analyze`, `/api/connect`, `/api/datasets*`, `/api/chat` exercised via curl locally; prod reachability of earlier endpoints confirmed. These working-tree changes are being committed in this change set.
+Historical validation when the AI upload flow was introduced: `npx tsc --noEmit` clean; `npx vitest run` = 20 passing; `npx next build` compiled; `/api/analyze`, `/api/connect`, `/api/datasets*`, `/api/chat` exercised locally. The AI upload change was committed as `4f4753a`.
 
 ## Recently completed (committed)
 
@@ -37,7 +44,7 @@ Validation run this session: `npx tsc --noEmit` clean; `npx vitest run` = 20 pas
 - `e61597b`: initial Crystal MVP dashboard.
 - Pre-repo (same session): migrated in-memory store → Neon Postgres; end-to-end flow fixes; GitHub repo + Vercel git-connect; Vitest; README rewrite; scrubbed target-company references before going public.
 
-## Files changed in this change set
+## Files changed in the earlier AI-upload change set (historical)
 
 - `src/lib/claude.ts` — `suggestSuccessMetrics` → `analyzeDataset` returning `{ name, icon, problemStatement, users, metrics }`; JSON-object parsing with forgiving extraction + no-key fallback.
 - `src/app/api/analyze/route.ts` — **new** endpoint (replaces `suggest-metrics`).
@@ -49,11 +56,20 @@ Validation run this session: `npx tsc --noEmit` clean; `npx vitest run` = 20 pas
 - `src/lib/database.ts` — `insertDataset`/`saveDataset` accept optional `icon`; `source_type` and `success_metrics` columns added via `ALTER ... IF NOT EXISTS` in bootstrap; `updateOutcome`; explicit-column reads.
 - `src/lib/types.ts` — `Dataset` gained `sourceType` and `successMetrics`.
 
+## Files changed in the current TAI-25/26 working tree
+
+- `src/lib/connectors/csv.ts`, `src/lib/connectors/index.ts` — CSV connector and source-type factory.
+- `src/lib/ingestion.ts` — common quality calculation and dataset persistence for connector results.
+- `src/lib/connectors/postgres.ts`, `src/lib/connectors/types.ts` — normalized snapshot timestamps on ingest results.
+- `src/lib/database.ts`, `src/lib/types.ts` — additive persisted `last_sync_at` field.
+- Upload/connect routes, dataset APIs, and detail page — shared ingestion path and source/last-sync display.
+
 ## Architectural decisions
 
 - Persistence is **Neon Postgres**, not SQLite. One `datasets` table; nested fields (schema/metadata/quality/outcome/success_metrics) and capped sample rows stored as JSONB.
 - Neon client is **lazy** (init on first query, safe for `next build`) and uses **`fetch` `cache: 'no-store'`** to avoid stale reads after writes. List/detail reads select explicit columns and **exclude the heavy `rows` JSONB** (an oversized `SELECT *` silently dropped rows over Neon's HTTP driver).
 - Source ingestion goes through a connector abstraction (`src/lib/connectors/`): `IDataConnector` + `IngestResult`. PostgreSQL is **snapshot-at-connect**; credentials are used once and **never stored**.
+- CSV and PostgreSQL now share a connector factory and dataset persistence/quality-calculation path. Quality is calculated from the connector's capped sample; `last_sync_at` records snapshot completion separately from general `updated_at` edits.
 - The detail page separates **real, data-derived** signals (quality, column profile, lineage, outcome) from **illustrative** ones (usage, 30-day trend), which are labeled as such.
 - **Outcome** is a user-owned, editable record (PATCH `/api/datasets/[id]`), not an auto-inferred business result. Fresh uploads start "Not started / 0".
 - AI runs **server-side** via Anthropic Messages API (`claude-opus-5-5`); keys stay in env vars. AI now powers chat, success-metric suggestions, and dataset name/emoji/problem/users autofill.
@@ -70,13 +86,13 @@ Validation run this session: `npx tsc --noEmit` clean; `npx vitest run` = 20 pas
 ## Outstanding work
 
 - Enable "Autofill with AI" for **PostgreSQL** sources (needs a sample fetched after connecting; currently CSV-only — AI button hidden for Postgres).
-- Finish **TAI-25 unified ingestion**: migrate the CSV path to a `CsvConnector` behind `IDataConnector`; normalize source metadata (last-sync).
+- Review the TAI-25/TAI-26 implementation against Linear acceptance details, then commit/deploy if desired. Real usage/trend telemetry remains outstanding; current usage/trend values are illustrative and outcome tracking remains manual.
 - Replace illustrative usage/trend with real signals (wire usage to actual query activity; derive freshness from upload time).
-- Phase 2 remaining connectors: Snowflake (TAI-22), BigQuery (TAI-23), unified metrics (TAI-26), cloud storage (TAI-27).
+- Phase 2 remaining connectors: Snowflake (TAI-22), BigQuery (TAI-23), cloud storage (TAI-27), plus backlog connectors and features.
 - Add integration/API tests + CI; confirm model id and env config in all environments.
 - Reconcile historical planning docs (Express/SQLite/Vite/Python mentions) with the actual Next.js/Neon architecture.
 - TAI-20 outreach is drafted on the Linear issue but must be **sent by a human** — not an agent action.
 
 ## Next recommended step
 
-Commit and push the current AI-autofill + name/emoji change set (auto-deploys), then pick up either PostgreSQL AI autofill or the `CsvConnector` migration (TAI-25).
+Review the source-agnostic ingestion and last-sync behavior, then decide whether to add real usage telemetry before proceeding with another source connector.

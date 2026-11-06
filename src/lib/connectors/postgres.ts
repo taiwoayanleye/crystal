@@ -98,6 +98,7 @@ export class PostgresConnector implements IDataConnector {
         schema: columns,
         rows: sample.rows as Record<string, any>[],
         rowCount,
+        lastSyncAt: new Date().toISOString(),
       }
     } catch (err) {
       throw new Error(

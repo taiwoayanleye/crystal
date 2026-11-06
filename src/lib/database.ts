@@ -31,6 +31,7 @@ interface DatasetRow {
   usage_count: number
   created_at: string
   updated_at: string
+  last_sync_at: string
 }
 
 const ICONS = ['📊', '📈', '📦', '🧬', '💊', '🔬']
@@ -83,12 +84,17 @@ async function bootstrap(): Promise<void> {
       rows JSONB NOT NULL DEFAULT '[]'::jsonb,
       usage_count INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_sync_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `
   // Added after initial release; keep existing rows working.
   await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'csv'`
   await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS success_metrics JSONB NOT NULL DEFAULT '[]'::jsonb`
+  await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS last_sync_at TIMESTAMPTZ`
+  await sql`UPDATE datasets SET last_sync_at = created_at WHERE last_sync_at IS NULL`
+  await sql`ALTER TABLE datasets ALTER COLUMN last_sync_at SET DEFAULT now()`
+  await sql`ALTER TABLE datasets ALTER COLUMN last_sync_at SET NOT NULL`
   const [{ count }] = (await sql`SELECT count(*)::int AS count FROM datasets`) as { count: number }[]
   if (count === 0) await seed()
 }
@@ -108,19 +114,21 @@ async function insertDataset(d: {
   rows: Record<string, any>[]
   createdAt?: string
   updatedAt?: string
+  lastSyncAt?: string
 }) {
   const sql = getSql()
   const created = d.createdAt ?? new Date().toISOString()
   const updated = d.updatedAt ?? created
+  const lastSync = d.lastSyncAt ?? created
   await sql`
     INSERT INTO datasets
-      (id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at)
+      (id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at, last_sync_at)
     VALUES (
       ${d.id}, ${d.name}, ${d.icon || iconFor(d.id)}, ${d.sourceType ?? 'csv'}, ${JSON.stringify(d.successMetrics ?? [])},
       ${d.problemStatement}, ${d.users},
       ${JSON.stringify(d.schema)}, ${JSON.stringify(d.metadata)},
       ${JSON.stringify(d.quality)}, ${JSON.stringify(d.outcome)},
-      ${JSON.stringify(d.rows)}, 0, ${created}, ${updated}
+      ${JSON.stringify(d.rows)}, 0, ${created}, ${updated}, ${lastSync}
     )
     ON CONFLICT (id) DO NOTHING
   `
@@ -203,6 +211,7 @@ function toDataset(r: DatasetRow): Dataset {
     successMetrics: r.success_metrics ?? [],
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
+    lastSyncAt: new Date(r.last_sync_at).toISOString(),
   }
 }
 
@@ -226,6 +235,7 @@ export async function saveDataset(input: {
   name: string
   icon?: string
   sourceType?: 'csv' | 'postgres'
+  lastSyncAt?: string
   successMetrics?: string[]
   problemStatement: string
   users: string
@@ -241,6 +251,7 @@ export async function saveDataset(input: {
     name: input.name,
     icon: input.icon,
     sourceType: input.sourceType ?? 'csv',
+    lastSyncAt: input.lastSyncAt,
     successMetrics: input.successMetrics ?? [],
     problemStatement: input.problemStatement,
     users: input.users,
@@ -272,7 +283,7 @@ export async function updateOutcome(id: string, outcome: OutcomeMetrics): Promis
 // All columns except the heavy `rows` JSONB, which list/detail never use
 // (only getDatasetRows needs it). Keeping it out avoids shipping hundreds of
 // sample rows over Neon's HTTP driver on every list/detail read.
-const COLS = `id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at`
+const COLS = `id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at, last_sync_at`
 
 export async function getAllDatasets(): Promise<DatasetWithMetrics[]> {
   await ensureReady()
