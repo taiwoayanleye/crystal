@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDataset, getDatasetRows, deleteDataset } from '@/lib/database'
+import { getDataset, getDatasetRows, deleteDataset, updateOutcome } from '@/lib/database'
+import type { OutcomeMetrics } from '@/lib/types'
 import { getTrendData, getUsageMetrics } from '@/lib/metrics'
 import { computeProfile } from '@/lib/profile'
 
@@ -33,7 +34,6 @@ export async function GET(
         ? 'stale'
         : 'error'
 
-    const sizeMb = Math.max(1, Math.round(dataset.metadata.rowCount / 100))
     const applications = Array.from(
       new Set(
         dataset.users
@@ -43,6 +43,16 @@ export async function GET(
       )
     )
     if (applications.length === 0) applications.push('Analytics Dashboard')
+
+    // Lineage built from the dataset's real source + shape (no fabricated size).
+    const isPg = dataset.sourceType === 'postgres'
+    const rowsLabel = `${dataset.metadata.rowCount.toLocaleString()} rows · ${dataset.metadata.columnCount} cols`
+    const rawStage = isPg
+      ? { name: 'PostgreSQL', description: rowsLabel, status: freshnessStatus }
+      : { name: 'CSV upload', description: rowsLabel, status: freshnessStatus }
+    const etlStage = isPg
+      ? { name: 'Introspect & sample', description: 'Schema from information_schema', status: 'fresh' as const }
+      : { name: 'Parse & store', description: 'Schema + type inference on upload', status: 'fresh' as const }
 
     const response = {
       id: dataset.id,
@@ -61,20 +71,12 @@ export async function GET(
       sampleRows,
       profile,
       lineage: {
-        raw: {
-          name: 'S3 CSV',
-          description: `${dataset.metadata.rowCount.toLocaleString()} rows · ${sizeMb}MB`,
-          status: freshnessStatus,
-        },
-        etl: {
-          name: 'Parse & Store',
-          description: 'Schema + type inference on upload',
-          status: 'fresh',
-        },
+        raw: rawStage,
+        etl: etlStage,
         transform: {
-          name: 'Semantic Layer',
-          description: `${dataset.metadata.columnCount} columns cleaned`,
-          status: 'fresh',
+          name: 'Profile',
+          description: `${dataset.metadata.columnCount} columns profiled`,
+          status: 'fresh' as const,
         },
         dataset: {
           name: dataset.name,
@@ -96,6 +98,42 @@ export async function GET(
     console.error('Fetch error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch dataset' },
+      { status: 500 }
+    )
+  }
+}
+
+const ALLOWED_STATUS = ['Not started', 'Testing', 'Validated', 'Rejected']
+
+/**
+ * PATCH /api/datasets/[id]
+ * Update the (user-owned) outcome tracking for a dataset.
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+    const o = body?.outcome
+    if (!o || typeof o !== 'object') {
+      return NextResponse.json({ error: 'Missing outcome' }, { status: 400 })
+    }
+
+    const score = Number(o.outcomeScore)
+    const outcome: OutcomeMetrics = {
+      hypothesis: String(o.hypothesis ?? '').slice(0, 500),
+      status: ALLOWED_STATUS.includes(o.status) ? o.status : 'Not started',
+      businessImpact: String(o.businessImpact ?? '').slice(0, 500) || 'Not set',
+      outcomeScore: Number.isFinite(score) ? Math.min(100, Math.max(0, Math.round(score))) : 0,
+    }
+
+    const ok = await updateOutcome(params.id, outcome)
+    if (!ok) return NextResponse.json({ error: 'Dataset not found' }, { status: 404 })
+    return NextResponse.json({ success: true, outcome })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Update failed' },
       { status: 500 }
     )
   }

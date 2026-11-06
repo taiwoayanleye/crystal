@@ -95,6 +95,14 @@ export default function ProductDetail() {
   const [error, setError] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [editingOutcome, setEditingOutcome] = useState(false)
+  const [savingOutcome, setSavingOutcome] = useState(false)
+  const [outcomeDraft, setOutcomeDraft] = useState({
+    hypothesis: '',
+    status: 'Not started',
+    businessImpact: '',
+    outcomeScore: 0,
+  })
 
   useEffect(() => {
     const fetchDataset = async () => {
@@ -112,6 +120,38 @@ export default function ProductDetail() {
     }
     fetchDataset()
   }, [datasetId])
+
+  const startEditOutcome = () => {
+    if (!data) return
+    setOutcomeDraft({
+      hypothesis: data.metrics.outcome.hypothesis,
+      status: ['Not started', 'Testing', 'Validated', 'Rejected'].includes(data.metrics.outcome.status)
+        ? data.metrics.outcome.status
+        : 'Testing',
+      businessImpact: data.metrics.outcome.businessImpact === 'Not set' ? '' : data.metrics.outcome.businessImpact,
+      outcomeScore: data.metrics.outcome.outcomeScore,
+    })
+    setEditingOutcome(true)
+  }
+
+  const saveOutcome = async () => {
+    setSavingOutcome(true)
+    try {
+      const res = await fetch(`/api/datasets/${datasetId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome: outcomeDraft }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      const { outcome } = await res.json()
+      setData((prev) => (prev ? { ...prev, metrics: { ...prev.metrics, outcome } } : prev))
+      setEditingOutcome(false)
+    } catch {
+      // keep the form open on failure
+    } finally {
+      setSavingOutcome(false)
+    }
+  }
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -312,9 +352,9 @@ export default function ProductDetail() {
               <span className="text-small text-text-light">illustrative</span>
             </div>
             <p className="text-small text-text-light mb-6">
-              Usage, the trend, outcome, and lineage below are illustrative placeholders — a real
-              deployment populates them from query logs and outcome tracking. Quality and the data
-              profile above are computed from your actual data.
+              Usage and the 30-day trend are illustrative — a real deployment populates them from
+              query logs. Quality, the data profile, lineage, and the (editable) outcome below all
+              reflect this dataset.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white border border-border rounded-lg p-4 text-center">
@@ -334,34 +374,103 @@ export default function ProductDetail() {
             <TrendChart data={data.trendData} />
           </div>
 
-          {/* Outcome Tracking */}
+          {/* Outcome Tracking — user-owned, editable */}
           <div className="mb-8">
-            <h2 className="text-section-title text-navy mb-6">Outcome Tracking</h2>
-            <div className="bg-white border border-border rounded-lg p-6 space-y-4">
-              <div>
-                <p className="text-small text-text-light">Hypothesis</p>
-                <p className="text-body text-text-dark font-medium">{outcome.hypothesis}</p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-small text-text-light">Status</p>
-                  <p className="text-body text-text-dark font-medium">{outcome.status}</p>
-                </div>
-                <div>
-                  <p className="text-small text-text-light">Business Impact</p>
-                  <p className="text-body text-text-dark font-medium">{outcome.businessImpact}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-small text-text-light mb-2">
-                  Outcome Score — {outcome.outcomeScore}/100
-                </p>
-                <ProgressBar
-                  value={outcome.outcomeScore}
-                  color={outcome.outcomeScore > 50 ? 'success' : 'warning'}
-                />
-              </div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-section-title text-navy">Outcome Tracking</h2>
+              {!editingOutcome && (
+                <Button variant="secondary" size="sm" onClick={startEditOutcome}>
+                  Edit
+                </Button>
+              )}
             </div>
+
+            {!editingOutcome ? (
+              <div className="bg-white border border-border rounded-lg p-6 space-y-4">
+                <div>
+                  <p className="text-small text-text-light">Hypothesis</p>
+                  <p className="text-body text-text-dark font-medium">{outcome.hypothesis || '—'}</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-small text-text-light">Status</p>
+                    <p className="text-body text-text-dark font-medium">{outcome.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-small text-text-light">Business Impact</p>
+                    <p className="text-body text-text-dark font-medium">{outcome.businessImpact}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-small text-text-light mb-2">
+                    Outcome Score — {outcome.outcomeScore}/100
+                  </p>
+                  <ProgressBar
+                    value={outcome.outcomeScore}
+                    color={outcome.outcomeScore > 50 ? 'success' : 'warning'}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white border border-border rounded-lg p-6 space-y-4">
+                <div>
+                  <label className="text-small text-text-light block mb-1">Hypothesis</label>
+                  <textarea
+                    value={outcomeDraft.hypothesis}
+                    onChange={(e) => setOutcomeDraft({ ...outcomeDraft, hypothesis: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="What are we trying to prove with this data?"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-small text-text-light block mb-1">Status</label>
+                    <select
+                      value={outcomeDraft.status}
+                      onChange={(e) => setOutcomeDraft({ ...outcomeDraft, status: e.target.value })}
+                      className="w-full px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      {['Not started', 'Testing', 'Validated', 'Rejected'].map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-small text-text-light block mb-1">Business Impact</label>
+                    <input
+                      value={outcomeDraft.businessImpact}
+                      onChange={(e) => setOutcomeDraft({ ...outcomeDraft, businessImpact: e.target.value })}
+                      className="w-full px-3 py-2 border border-border rounded-md text-small focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., $500K ARR if validated"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-small text-text-light block mb-2">
+                    Outcome Score — {outcomeDraft.outcomeScore}/100
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={outcomeDraft.outcomeScore}
+                    onChange={(e) => setOutcomeDraft({ ...outcomeDraft, outcomeScore: Number(e.target.value) })}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button variant="primary" size="sm" onClick={saveOutcome} disabled={savingOutcome}>
+                    {savingOutcome ? 'Saving…' : 'Save'}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditingOutcome(false)} disabled={savingOutcome}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Data Lineage */}

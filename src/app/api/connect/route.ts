@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
 
     const datasetId = await saveDataset({
       name: result.name,
+      sourceType: 'postgres',
       problemStatement: problemStatement || `PostgreSQL table: ${result.name}`,
       users: users || 'Data team',
       schema: result.schema,

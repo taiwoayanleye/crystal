@@ -19,6 +19,7 @@ export interface Dataset {
   id: string
   name: string
   icon: string
+  sourceType: 'csv' | 'postgres'
   problemStatement: string
   users: string
   schema: string[]

@@ -19,6 +19,7 @@ interface DatasetRow {
   id: string
   name: string
   icon: string
+  source_type: 'csv' | 'postgres'
   problem_statement: string
   users: string
   schema: string[]
@@ -84,6 +85,8 @@ async function bootstrap(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `
+  // Added after initial release; keep existing rows working.
+  await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'csv'`
   const [{ count }] = (await sql`SELECT count(*)::int AS count FROM datasets`) as { count: number }[]
   if (count === 0) await seed()
 }
@@ -91,6 +94,7 @@ async function bootstrap(): Promise<void> {
 async function insertDataset(d: {
   id: string
   name: string
+  sourceType?: 'csv' | 'postgres'
   problemStatement: string
   users: string
   schema: string[]
@@ -106,9 +110,9 @@ async function insertDataset(d: {
   const updated = d.updatedAt ?? created
   await sql`
     INSERT INTO datasets
-      (id, name, icon, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at)
+      (id, name, icon, source_type, problem_statement, users, schema, metadata, quality, outcome, rows, usage_count, created_at, updated_at)
     VALUES (
-      ${d.id}, ${d.name}, ${iconFor(d.id)}, ${d.problemStatement}, ${d.users},
+      ${d.id}, ${d.name}, ${iconFor(d.id)}, ${d.sourceType ?? 'csv'}, ${d.problemStatement}, ${d.users},
       ${JSON.stringify(d.schema)}, ${JSON.stringify(d.metadata)},
       ${JSON.stringify(d.quality)}, ${JSON.stringify(d.outcome)},
       ${JSON.stringify(d.rows)}, 0, ${created}, ${updated}
@@ -184,6 +188,7 @@ function toDataset(r: DatasetRow): Dataset {
     id: r.id,
     name: r.name,
     icon: r.icon,
+    sourceType: r.source_type ?? 'csv',
     problemStatement: r.problem_statement,
     users: r.users,
     schema: r.schema,
@@ -213,6 +218,7 @@ function toWithMetrics(r: DatasetRow): DatasetWithMetrics {
 
 export async function saveDataset(input: {
   name: string
+  sourceType?: 'csv' | 'postgres'
   problemStatement: string
   users: string
   schema: string[]
@@ -225,15 +231,17 @@ export async function saveDataset(input: {
   await insertDataset({
     id,
     name: input.name,
+    sourceType: input.sourceType ?? 'csv',
     problemStatement: input.problemStatement,
     users: input.users,
     schema: input.schema,
     metadata: input.metadata,
     quality: input.quality,
+    // Honest starting point: outcome is user-owned and not yet tracked.
     outcome: {
       hypothesis: input.problemStatement,
-      status: 'Testing (Week 1 of 4)',
-      businessImpact: 'Impact TBD — tracking started on upload',
+      status: 'Not started',
+      businessImpact: 'Not set',
       outcomeScore: 0,
     },
     rows: input.rows,
@@ -241,10 +249,20 @@ export async function saveDataset(input: {
   return id
 }
 
+export async function updateOutcome(id: string, outcome: OutcomeMetrics): Promise<boolean> {
+  await ensureReady()
+  const sql = getSql()
+  const updated = (await sql`
+    UPDATE datasets SET outcome = ${JSON.stringify(outcome)}, updated_at = now()
+    WHERE id = ${id} RETURNING id
+  `) as { id: string }[]
+  return updated.length > 0
+}
+
 // All columns except the heavy `rows` JSONB, which list/detail never use
 // (only getDatasetRows needs it). Keeping it out avoids shipping hundreds of
 // sample rows over Neon's HTTP driver on every list/detail read.
-const COLS = `id, name, icon, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at`
+const COLS = `id, name, icon, source_type, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at`
 
 export async function getAllDatasets(): Promise<DatasetWithMetrics[]> {
   await ensureReady()
