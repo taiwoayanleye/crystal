@@ -121,14 +121,14 @@ export default function HomePage() {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 mb-12">
             {[
-              { label: 'PostgreSQL', desc: 'Relational', bg: 'bg-blue-50 dark:bg-blue-950' },
-              { label: 'Snowflake', desc: 'Warehouse', bg: 'bg-cyan-50 dark:bg-cyan-950' },
-              { label: 'BigQuery', desc: 'Google Cloud', bg: 'bg-blue-50 dark:bg-blue-950' },
-              { label: 'S3', desc: 'AWS Storage', bg: 'bg-orange-50 dark:bg-orange-950' },
-              { label: 'GCS', desc: 'Cloud Storage', bg: 'bg-blue-50 dark:bg-blue-950' },
-            ].map(({ label, desc, bg }) => (
-              <div key={label} className={`flex flex-col items-center gap-2 p-4 rounded-lg ${bg} border border-border-subtle hover:border-border-default transition-colors`}>
-                <span className="font-mono font-bold text-sm text-text-primary">{label.split('').slice(0, 2).join('').toUpperCase()}</span>
+              { label: 'PostgreSQL', desc: 'Relational', logo: '◈' },
+              { label: 'Snowflake', desc: 'Warehouse', logo: '❄' },
+              { label: 'BigQuery', desc: 'Google Cloud', logo: '■' },
+              { label: 'S3', desc: 'AWS Storage', logo: '◼' },
+              { label: 'GCS', desc: 'Cloud Storage', logo: '☁' },
+            ].map(({ label, desc, logo }) => (
+              <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-lg bg-bg-base border border-border-subtle hover:border-border-default transition-colors">
+                <div className="text-2xl font-bold text-accent">{logo}</div>
                 <span className="font-medium text-xs sm:text-sm text-center text-text-primary">{label}</span>
                 <span className="text-[10px] text-text-secondary text-center">{desc}</span>
               </div>
