@@ -128,6 +128,7 @@ export default function HomePage() {
               { label: 'GCS', desc: 'Cloud Storage' },
             ].map(({ label, desc }) => (
               <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-lg bg-bg-base border border-border-subtle hover:border-border-default transition-colors">
+                <div className="w-8 h-8 rounded border border-border-default flex items-center justify-center text-xs font-semibold text-text-primary">◆</div>
                 <span className="font-medium text-xs sm:text-sm text-center text-text-primary">{label}</span>
                 <span className="text-[10px] text-text-secondary text-center">{desc}</span>
               </div>
@@ -142,23 +143,28 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
             {[
               {
+                icon: '⟡',
                 title: 'Connect Anywhere',
                 description: 'Ingest from CSV, PostgreSQL, Snowflake, BigQuery, S3, or GCS. One unified interface for all enterprise data sources.',
               },
               {
+                icon: '◆',
                 title: 'AI Autofill',
                 description: 'Claude analyzes your data and auto-generates dataset names, problem statements, and success metrics in seconds.',
               },
               {
+                icon: '⟡',
                 title: 'Keep Data Fresh',
                 description: 'Set daily refresh schedules. Automatic syncs with full history, error tracking, and manual refresh on demand.',
               },
               {
+                icon: '◆',
                 title: 'Measure Business Impact',
                 description: 'Track the outcome hypothesis for each dataset. Document what problem it solves and measure the business results.',
               },
-            ].map(({ title, description }) => (
+            ].map(({ icon, title, description }) => (
               <div key={title} className="flex flex-col gap-3 p-5 rounded-lg border border-border-subtle bg-bg-base hover:border-border-default transition-colors">
+                <div className="text-xl font-semibold text-accent">{icon}</div>
                 <h3 className="font-heading text-lg font-semibold text-text-primary">{title}</h3>
                 <p className="text-sm text-text-secondary leading-6">{description}</p>
               </div>
