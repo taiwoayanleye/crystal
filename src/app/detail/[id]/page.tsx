@@ -55,8 +55,9 @@ interface DetailData {
   }
   createdAt: string
   updatedAt: string
-  sourceType: 'csv' | 'postgres'
+  sourceType: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   lastSyncAt: string
+  syncSchedule?: string | null
 }
 
 function qualityColor(value: number): 'success' | 'warning' | 'error' {
@@ -109,6 +110,10 @@ export default function ProductDetail() {
     businessImpact: '',
     outcomeScore: 0,
   })
+  const [syncSchedule, setSyncSchedule] = useState('')
+  const [syncHistory, setSyncHistory] = useState<any[]>([])
+  const [refreshing, setRefreshing] = useState(false)
+  const [savingSchedule, setSavingSchedule] = useState(false)
 
   useEffect(() => {
     const fetchDataset = async () => {
@@ -140,6 +145,23 @@ export default function ProductDetail() {
     }
   }, [data])
 
+  useEffect(() => {
+    if (!data?.id) return
+    const fetchSyncData = async () => {
+      try {
+        setSyncSchedule(data.syncSchedule || '')
+        const res = await fetch(`/api/datasets/${data.id}/sync`)
+        if (res.ok) {
+          const { syncHistory } = await res.json()
+          setSyncHistory(syncHistory || [])
+        }
+      } catch (err) {
+        console.warn('Failed to fetch sync history:', err)
+      }
+    }
+    fetchSyncData()
+  }, [data?.id, data?.syncSchedule])
+
   const startEditOutcome = () => {
     if (!data) return
     setOutcomeDraft({
@@ -169,6 +191,46 @@ export default function ProductDetail() {
       // keep the form open on failure
     } finally {
       setSavingOutcome(false)
+    }
+  }
+
+  const saveSyncSchedule = async () => {
+    if (!data?.id || !syncSchedule.match(/^\d{2}:\d{2}$/)) return
+    setSavingSchedule(true)
+    try {
+      const res = await fetch(`/api/datasets/${data.id}/sync`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule: syncSchedule }),
+      })
+      if (!res.ok) throw new Error('Failed to save schedule')
+    } catch (err) {
+      console.error('Schedule save error:', err)
+    } finally {
+      setSavingSchedule(false)
+    }
+  }
+
+  const manualRefresh = async () => {
+    if (!data?.id || data.sourceType === 'csv') return
+    setRefreshing(true)
+    try {
+      const res = await fetch(`/api/refresh/${data.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceType: data.sourceType, connection: {} }),
+      })
+      if (res.ok) {
+        const refreshRes = await fetch(`/api/datasets/${data.id}/sync`)
+        if (refreshRes.ok) {
+          const { syncHistory } = await refreshRes.json()
+          setSyncHistory(syncHistory || [])
+        }
+      }
+    } catch (err) {
+      console.error('Refresh error:', err)
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -531,6 +593,68 @@ export default function ProductDetail() {
               </div>
             )}
           </div>
+
+          {/* Sync Schedule */}
+          {data.sourceType !== 'csv' && (
+            <div className="mb-8">
+              <h2 className="font-heading text-lg font-semibold text-text-primary mb-4">Sync schedule</h2>
+              <div className="rounded-lg border border-border-subtle bg-surface p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs text-text-secondary block mb-2">Daily refresh time (UTC)</label>
+                    <input
+                      type="time"
+                      value={syncSchedule}
+                      onChange={(e) => setSyncSchedule(e.target.value)}
+                      className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="primary" size="sm" onClick={saveSyncSchedule} disabled={savingSchedule || !syncSchedule.match(/^\d{2}:\d{2}$/)}>
+                      {savingSchedule ? 'Saving…' : 'Save'}
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={manualRefresh} disabled={refreshing}>
+                      {refreshing ? 'Syncing…' : 'Refresh now'}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-text-tertiary mt-3">External cron service will automatically trigger refreshes at this time daily.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Sync History */}
+          {syncHistory.length > 0 && (
+            <div className="mb-8">
+              <h2 className="font-heading text-lg font-semibold text-text-primary mb-4">Sync history</h2>
+              <div className="overflow-x-auto rounded-lg border border-border-subtle">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-border-subtle bg-surface">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary">Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary">Rows</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {syncHistory.slice(0, 10).map((sync: any, i: number) => (
+                      <tr key={i} className="bg-bg-base hover:bg-bg-elevated">
+                        <td className="px-4 py-3 text-xs text-text-primary">{new Date(sync.completedAt).toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded px-2 py-1 text-[10px] font-medium ${sync.status === 'success' ? 'bg-data-green/10 text-data-green' : 'bg-error/10 text-error'}`}>
+                            {sync.status === 'success' ? '✓ Success' : '✗ Failed'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-text-primary">{sync.rowsSynced.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-[10px] text-text-secondary truncate">{sync.errorMessage || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Data Lineage */}
           <div id="data-flow" className="mb-8 scroll-mt-6">
