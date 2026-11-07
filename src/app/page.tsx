@@ -158,9 +158,9 @@ export default function HomePage() {
                 description: 'Set daily refresh schedules. Automatic syncs with full history, error tracking, and manual refresh on demand.',
               },
               {
-                icon: '📊',
-                title: 'Quality Signals',
-                description: 'Real-time freshness, completeness, and accuracy scores. Know the health of each dataset at a glance.',
+                icon: '🎯',
+                title: 'Measure Business Impact',
+                description: 'Track the outcome hypothesis for each dataset. Document what problem it solves and measure the business results.',
               },
             ].map(({ icon, title, description }) => (
               <div key={title} className="flex flex-col gap-3">
