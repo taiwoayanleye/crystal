@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connector implementations: Snowflake TAI-22 and BigQuery TAI-23)._
+_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connector implementations: Snowflake TAI-22, BigQuery TAI-23, and Cloud Storage TAI-27)._
 
 ## Handoff snapshot
 
@@ -125,11 +125,12 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Outstanding work
 
-- **TAI-22 & TAI-23 complete:** Both Snowflake and BigQuery connectors are now implemented, tested, and marked Done in Linear.
+- **Phase 2 connectors complete:** All four enterprise connectors (Snowflake, BigQuery, S3, GCS) are implemented, tested, and marked Done in Linear (TAI-22, TAI-23, TAI-27).
 - Enable "Autofill with AI" for **PostgreSQL** sources (needs a sample fetched after connecting; currently CSV-only — AI button hidden for Postgres).
 - Review the TAI-25/TAI-26 implementation against Linear acceptance details. Real usage/trend telemetry remains outstanding; current usage/trend values are illustrative and outcome tracking remains manual.
 - Replace illustrative usage/trend with real signals (wire usage to actual query activity; derive freshness from upload time).
-- Phase 2 remaining connectors: cloud storage (TAI-27: S3/GCS), plus backlog connectors and features.
+- Live/scheduled sync (TAI-32): Add cron-based connector re-ingestion and refresh UI.
+- Format support expansion: JSON and Parquet file format support for S3/GCS.
 - Add integration/API tests + CI; confirm model id and env config in all environments.
 - Reconcile historical planning docs (Express/SQLite/Vite/Python mentions) with the actual Next.js/Neon architecture.
 - TAI-20 outreach is drafted on the Linear issue but must be **sent by a human** — not an agent action.
@@ -178,6 +179,46 @@ Implemented source-agnostic quality/usage/trend metrics, unblocking Phase 2 conn
 
 **Impact:** Phase 2 connectors (Snowflake, BigQuery, S3/GCS) can now be implemented without metric calculation changes.
 
+## Completed — Phase 2 connectors: S3 and GCS (TAI-27) (2026-11-07)
+
+Implemented two cloud storage connectors for CSV file ingestion.
+
+**S3 connector (`src/lib/connectors/s3.ts`):**
+- Configuration: `bucket`, `key` (S3 object path), `accessKeyId`, `secretAccessKey`, `region` (default: us-east-1)
+- AWS Signature Version 4 signing for REST API authentication
+- CSV file parsing from S3 buckets
+- Schema detection, row count, and sample data fetching
+- Integrated with `/api/connect` route
+
+**GCS connector (`src/lib/connectors/gcs.ts`):**
+- Configuration: `bucket`, `objectName`, `serviceAccountJson`
+- Google Cloud OAuth2 JWT authentication (same pattern as BigQuery)
+- CSV file parsing from Google Cloud Storage
+- Rest API integration to GCS query endpoint
+- Integrated with `/api/connect` route; validates all required fields
+
+**Updates across the codebase:**
+- `SourceType` union updated to include `'s3'` and `'gcs'`
+- `Dataset` and `DatasetRow` types updated to reflect new source types
+- `insertDataset`, `saveDataset` accept new source types
+- Connector factory (`getConnector`) dispatches to new connector classes
+- `/api/connect` route accepts both S3 and GCS configurations with unified validation & ingestion
+
+**Validation:**
+- `npx tsc --noEmit` — no errors
+- `npm test` — 20/20 tests pass
+- `npm run build` — production build succeeds
+- Commit: `28cf27e` (Cloud Storage S3/GCS TAI-27)
+
+**Technical approach:**
+- Snapshot-at-connect: credentials used once per ingest, never persisted
+- REST APIs for both providers (AWS and Google Cloud)
+- CSV-only support initially (JSON/Parquet can be added as new connector variants)
+- Follows existing connector pattern; inherits metrics calculation from TAI-26
+- Ready for live/scheduled sync workflows (TAI-32)
+
+**Marked as Done in Linear:** TAI-27 now shows `completedAt` timestamp.
+
 ## Completed — Phase 2 connectors: Snowflake (TAI-22) and BigQuery (TAI-23) (2026-11-07)
 
 Implemented two enterprise data warehouse connectors following the unified `IDataConnector` pattern.
@@ -220,8 +261,14 @@ Implemented two enterprise data warehouse connectors following the unified `IDat
 
 ## Next steps (product backlog)
 
-1. **Phase 2 connectors (remaining):** Cloud storage (TAI-27: S3/GCS)
-   - Follows the same unified ingestion + metrics system
+1. **Phase 2 complete:** All enterprise connectors are now implemented (Snowflake, BigQuery, S3, GCS)
+   - All use unified ingestion + metrics system
+2. **Live/scheduled sync (TAI-32):** Implement ingest scheduling & refresh UI
+   - Add cron-based connector re-ingestion
+   - Add refresh timestamps and manual sync triggers
+3. **Format support expansion:** JSON and Parquet file format support
+   - S3 and GCS connectors can be extended with format detection
+   - CSV is the current baseline for all cloud storage ingestion
 2. **Infrastructure:** Separate Neon dev database; add integration/API tests + CI
 3. **PostgreSQL AI autofill:** Enable "Autofill with AI" for database sources (TAI-26 prerequisite done)
 4. **Real signals:** Replace illustrative usage/trend when query logs available
