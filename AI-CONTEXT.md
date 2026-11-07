@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connector implementations: Snowflake TAI-22, BigQuery TAI-23, and Cloud Storage TAI-27)._
+_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connectors and started TAI-32 scheduled sync infrastructure)._
 
 ## Handoff snapshot
 
@@ -126,10 +126,10 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 ## Outstanding work
 
 - **Phase 2 connectors complete:** All four enterprise connectors (Snowflake, BigQuery, S3, GCS) are implemented, tested, and marked Done in Linear (TAI-22, TAI-23, TAI-27).
+- **TAI-32 in progress:** Scheduled sync API infrastructure complete; UI for schedule config and sync history is next.
 - Enable "Autofill with AI" for **PostgreSQL** sources (needs a sample fetched after connecting; currently CSV-only — AI button hidden for Postgres).
 - Review the TAI-25/TAI-26 implementation against Linear acceptance details. Real usage/trend telemetry remains outstanding; current usage/trend values are illustrative and outcome tracking remains manual.
 - Replace illustrative usage/trend with real signals (wire usage to actual query activity; derive freshness from upload time).
-- Live/scheduled sync (TAI-32): Add cron-based connector re-ingestion and refresh UI.
 - Format support expansion: JSON and Parquet file format support for S3/GCS.
 - Add integration/API tests + CI; confirm model id and env config in all environments.
 - Reconcile historical planning docs (Express/SQLite/Vite/Python mentions) with the actual Next.js/Neon architecture.
@@ -259,16 +259,47 @@ Implemented two enterprise data warehouse connectors following the unified `IDat
 
 **Marked as Done in Linear:** TAI-22 and TAI-23 now show `completedAt` timestamp.
 
+## In Progress — Scheduled sync infrastructure (TAI-32 - Part 1) (2026-11-07)
+
+Implemented API infrastructure for daily dataset refresh scheduling with external cron support.
+
+**What was built:**
+- Database schema: `sync_schedule` column on datasets, new `syncs` table for history
+- **GET /api/cron/sync** — returns datasets scheduled to sync at current UTC hour (callable by external scheduler)
+- **POST /api/refresh/[id]** — manually trigger refresh with connector config (re-ingests, updates dataset, logs results)
+- **PATCH /api/datasets/[id]/sync** — set daily sync time (e.g., "09:00" UTC)
+- **GET /api/datasets/[id]/sync** — retrieve sync history (status, row counts, errors)
+- Database functions: setSyncSchedule, logSync, getSyncHistory, updateDatasetFromIngest
+
+**Technical implementation:**
+- Daily schedules stored as UTC times ("HH:MM" format)
+- External cron service (EasyCron, AWS EventBridge, etc.) polls /api/cron/sync hourly
+- Cron endpoint returns list of datasets ready for sync
+- Service then calls POST /api/refresh/[id] for each dataset
+- Each refresh: re-ingests → updates metrics → logs result
+
+**Validation:**
+- TypeScript: ✓
+- Tests: 20/20 passing ✓
+- Build: ✓
+- Commit: `37ff454`
+
+**Remaining for TAI-32:**
+- UI to set sync schedules on detail page
+- UI to view sync history (last sync time, status, error details)
+- Optional: retry logic with exponential backoff
+- Optional: expand to hourly/weekly frequencies (currently daily only)
+
 ## Next steps (product backlog)
 
-1. **Phase 2 complete:** All enterprise connectors are now implemented (Snowflake, BigQuery, S3, GCS)
-   - All use unified ingestion + metrics system
-2. **Live/scheduled sync (TAI-32):** Implement ingest scheduling & refresh UI
-   - Add cron-based connector re-ingestion
-   - Add refresh timestamps and manual sync triggers
-3. **Format support expansion:** JSON and Parquet file format support
+1. **TAI-32 UI completion:** Add schedule configuration and sync history views to detail page
+   - Time picker for setting daily sync schedule (UTC)
+   - Sync history panel showing past sync events, status, error messages
+   - Manual refresh button with loading state
+2. **Format support expansion:** JSON and Parquet file format support
    - S3 and GCS connectors can be extended with format detection
    - CSV is the current baseline for all cloud storage ingestion
+3. **Backlog features:** Real telemetry, PostgreSQL AI autofill, integration tests, CI
 2. **Infrastructure:** Separate Neon dev database; add integration/API tests + CI
 3. **PostgreSQL AI autofill:** Enable "Autofill with AI" for database sources (TAI-26 prerequisite done)
 4. **Real signals:** Replace illustrative usage/trend when query logs available
