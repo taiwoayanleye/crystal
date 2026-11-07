@@ -7,6 +7,7 @@ import { ChatPanel } from '@/components/ChatPanel'
 import { MetricCard } from '@/components/MetricCard'
 import { UploadModal, type UploadSubmit } from '@/components/UploadModal'
 import { Button } from '@/components/Button'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface Dataset {
   id: string
@@ -229,6 +230,7 @@ export default function Dashboard() {
                     className="min-w-0 flex-1 bg-transparent text-xs text-text-primary outline-none placeholder:text-text-tertiary"
                   />
                 </label>
+                <ThemeToggle />
                 <span title="Signed in as Taiwo Ayanleye" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-white">T</span>
               </div>
             </div>

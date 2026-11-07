@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface LandingDataset {
   qualityScore: number
@@ -62,6 +63,7 @@ export default function HomePage() {
           <a href={`${REPOSITORY_URL}#readme`} className="hidden transition-colors hover:text-text-primary sm:inline">Docs</a>
           <a href={REPOSITORY_URL} className="hidden transition-colors hover:text-text-primary sm:inline">GitHub</a>
           <a href={`${REPOSITORY_URL}/commits/main/`} className="hidden transition-colors hover:text-text-primary md:inline">Changelog</a>
+          <ThemeToggle />
           <Link href="/dashboard" className="rounded-md bg-accent px-3.5 py-2 font-medium text-white transition-colors hover:bg-accent-light sm:px-5">
             Open Dashboard
           </Link>
