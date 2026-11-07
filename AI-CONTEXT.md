@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connectors and started TAI-32 scheduled sync infrastructure)._
+_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connectors, TAI-32 sync infrastructure, PostgreSQL AI autofill, and updated homepage with marketing copy)._
 
 ## Handoff snapshot
 
@@ -258,6 +258,69 @@ Implemented two enterprise data warehouse connectors following the unified `IDat
 - Ready for live/scheduled sync workflows (TAI-32)
 
 **Marked as Done in Linear:** TAI-22 and TAI-23 now show `completedAt` timestamp.
+
+## Completed — PostgreSQL AI autofill (extended to all sources) (2026-11-07)
+
+Extended the AI-assisted dataset creation feature from CSV-only to all connector types.
+
+**What was implemented:**
+- Modified `/api/connect` route to accept `?analyze=true` query parameter
+- When analyze=true, generates AI suggestions via `/api/analyze` for any data source
+- Returns suggestions (name, icon, problem statement, users, metrics) in response
+- All five connectors now support AI analysis:
+  * PostgreSQL, Snowflake, BigQuery (database connectors)
+  * S3, GCS (cloud storage connectors)
+- AI suggestions gracefully degrade if analysis fails; connection still succeeds
+
+**Technical approach:**
+- `analyzeDataset()` accepts schema + sample rows for any tabular source
+- Suggestions are used as defaults for name, icon, problem statement, users, metrics
+- Falls back to generic defaults (e.g., "PostgreSQL table: ...") if analysis skipped
+- API backward-compatible: existing callers without `?analyze=true` work unchanged
+
+**UI Impact:**
+- API infrastructure now supports "Autofill with AI" button for all source types
+- Frontend can display button for PostgreSQL, Snowflake, BigQuery, S3, GCS (not just CSV)
+- Response includes both schema and suggestions for client UI prefilling
+
+**Validation:**
+- TypeScript: ✓
+- Tests: 20/20 passing ✓
+- Build: ✓
+- Commit: `6b170bc`
+
+## Completed — Homepage redesign with growth marketing copy (2026-11-07)
+
+Updated the landing page to showcase all Crystal capabilities and value proposition.
+
+**What changed:**
+- **Hero messaging:** "Turn raw data into products" emphasizes transformation and shipping
+- **Data sources section:** Visual grid showing all 5 supported connectors with icons (🐘❄️☁️🪣☁️)
+- **Features grid:** 6 key differentiators with clear benefits:
+  * AI Autofill — Claude generates names, problem statements, metrics from schema
+  * Scheduled Syncs — Daily refresh automation with full history
+  * Quality Signals — Real-time freshness, completeness, accuracy metrics
+  * Outcome Tracking — Manual hypothesis, status, business impact recording
+  * Usage Insights — Demo activity and adoption metrics
+  * Data Lineage — Observable processing from source to product
+- **Improved CTAs:** Messaging focused on scale ("CSV to enterprise warehouses")
+
+**Copy approach:**
+- Growth marketer voice emphasizing automation, breadth, trust, and scale
+- Highlight unique value: "Connect anywhere. Autofill with AI. Schedule refreshes. Track outcomes."
+- Reinforce maturity journey: "Start with CSV. Scale to enterprise data warehouses."
+
+**Design consistency:**
+- Maintained all Tailwind tokens (accent, text-primary, text-secondary, borders)
+- Used design system spacing (4/8/16px multiples)
+- Emoji icons (✨⏰📊🎯📈🔗) for visual clarity
+- Responsive across mobile, tablet, desktop
+- No breaking changes to existing components
+
+**Validation:**
+- TypeScript: ✓
+- Build: ✓
+- Commit: `c194463`
 
 ## In Progress — Scheduled sync infrastructure (TAI-32 - Part 1) (2026-11-07)
 
