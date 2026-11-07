@@ -38,15 +38,12 @@ export async function GET(
       new Set(dataset.users.split(/[,/]/).map((user) => user.trim()).filter(Boolean))
     )
 
-    // Lineage built from the dataset's real source + shape (no fabricated size).
-    const isPg = dataset.sourceType === 'postgres'
+    const sourceLabels: Record<string, string> = { csv: 'CSV upload', postgres: 'PostgreSQL', snowflake: 'Snowflake', bigquery: 'BigQuery', s3: 'S3', gcs: 'GCS' }
     const rowsLabel = `${dataset.metadata.rowCount.toLocaleString()} rows · ${dataset.metadata.columnCount} cols`
-    const rawStage = isPg
-      ? { name: 'PostgreSQL', description: rowsLabel, status: freshnessStatus }
-      : { name: 'CSV upload', description: rowsLabel, status: freshnessStatus }
-    const etlStage = isPg
-      ? { name: 'Introspect & sample', description: 'Schema from information_schema', status: 'fresh' as const }
-      : { name: 'Parse & store', description: 'Schema + type inference on upload', status: 'fresh' as const }
+    const rawStage = { name: sourceLabels[dataset.sourceType] || dataset.sourceType, description: rowsLabel, status: freshnessStatus }
+    const etlStage = dataset.sourceType === 'csv'
+      ? { name: 'Parse & store', description: 'Schema + type inference on upload', status: 'fresh' as const }
+      : { name: 'Introspect & sample', description: `Schema from ${sourceLabels[dataset.sourceType] || dataset.sourceType}`, status: 'fresh' as const }
 
     const response = {
       id: dataset.id,

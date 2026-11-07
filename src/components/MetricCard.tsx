@@ -3,7 +3,7 @@ import { ProgressBar } from './ProgressBar'
 interface MetricCardProps {
   icon: string
   title: string
-  sourceType: 'csv' | 'postgres'
+  sourceType: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   rowCount: number
   lastSyncAt: string
   qualityScore: number
@@ -37,7 +37,7 @@ export function MetricCard({
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold text-text-primary" title={title}>{title}</h2>
           <p className="mt-1 truncate font-mono text-[11px] text-text-tertiary">
-            {sourceType === 'postgres' ? 'PostgreSQL' : 'CSV'} <span aria-hidden="true">--</span> {rowCount.toLocaleString()} rows <span aria-hidden="true">--</span> {snapshotDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            {{ csv: 'CSV', postgres: 'PostgreSQL', snowflake: 'Snowflake', bigquery: 'BigQuery', s3: 'S3', gcs: 'GCS' }[sourceType]} <span aria-hidden="true">--</span> {rowCount.toLocaleString()} rows <span aria-hidden="true">--</span> {snapshotDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
           </p>
         </div>
         <span className="shrink-0 font-mono text-2xl font-medium leading-none text-data-green" title="Calculated quality score; includes heuristic estimates">

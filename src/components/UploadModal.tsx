@@ -295,7 +295,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  <div className="text-text-dark">{file ? `📄 ${file.name}` : 'Drag & Drop CSV Here'}</div>
+                  <div className="text-text-dark">{file ? file.name : 'Drag & Drop CSV Here'}</div>
                   <div className="mt-1 text-small text-text-primary">
                     {file ? 'Click to choose a different file' : 'or Click to Browse'}
                   </div>
@@ -377,7 +377,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                 disabled={analyzing || !pg.host || !pg.database || !pg.user || !pg.password || !pg.table}
                 className="w-full"
               >
-                {analyzing ? 'Analyzing…' : '✨ Autofill with AI'}
+                {analyzing ? 'Analyzing…' : 'Autofill with AI'}
               </Button>
             </div>
           )}
@@ -386,7 +386,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
             <label htmlFor="dataset-name" className="text-small text-text-dark font-medium block mb-2">Dataset name</label>
             <div className="flex gap-2">
               <div className="w-11 flex-shrink-0 flex items-center justify-center border border-border rounded-md text-xl" title="Icon">
-                {icon || '📄'}
+                {icon || '◇'}
               </div>
               <input
                 id="dataset-name"

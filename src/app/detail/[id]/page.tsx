@@ -113,7 +113,7 @@ export default function ProductDetail() {
   })
   const [syncSchedule, setSyncSchedule] = useState('')
   const [syncHistory, setSyncHistory] = useState<any[]>([])
-  const [refreshing, setRefreshing] = useState(false)
+  const [refreshing] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
 
   useEffect(() => {
@@ -212,27 +212,9 @@ export default function ProductDetail() {
     }
   }
 
-  const manualRefresh = async () => {
-    if (!data?.id || data.sourceType === 'csv') return
-    setRefreshing(true)
-    try {
-      const res = await fetch(`/api/refresh/${data.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceType: data.sourceType, connection: {} }),
-      })
-      if (res.ok) {
-        const refreshRes = await fetch(`/api/datasets/${data.id}/sync`)
-        if (refreshRes.ok) {
-          const { syncHistory } = await refreshRes.json()
-          setSyncHistory(syncHistory || [])
-        }
-      }
-    } catch (err) {
-      console.error('Refresh error:', err)
-    } finally {
-      setRefreshing(false)
-    }
+  const manualRefresh = () => {
+    // Credentials are never stored (snapshot-at-connect architecture).
+    // Manual refresh requires re-connecting from the dashboard.
   }
 
   const handleDelete = async () => {
@@ -319,7 +301,7 @@ export default function ProductDetail() {
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="rounded-md border border-border-subtle bg-surface px-2.5 py-1.5 font-mono text-[10px] text-text-secondary">
-                  {data.sourceType === 'postgres' ? 'PostgreSQL snapshot' : 'CSV snapshot'}
+                  {{ csv: 'CSV', postgres: 'PostgreSQL', snowflake: 'Snowflake', bigquery: 'BigQuery', s3: 'S3', gcs: 'GCS' }[data.sourceType]} snapshot
                 </span>
                 <Button variant="primary" size="sm" onClick={() => setChatOpen(true)}>Ask about this data</Button>
               </div>
@@ -341,7 +323,7 @@ export default function ProductDetail() {
               <div className="border-b border-border-subtle bg-surface px-4 py-3.5 md:border-r">
                 <p className="text-[10px] text-text-tertiary mb-1">Source</p>
                 <p className="text-xs text-text-primary font-medium">
-                  {data.sourceType === 'postgres' ? 'PostgreSQL' : 'CSV upload'}
+                  {{ csv: 'CSV upload', postgres: 'PostgreSQL', snowflake: 'Snowflake', bigquery: 'BigQuery', s3: 'S3', gcs: 'GCS' }[data.sourceType]}
                 </p>
               </div>
               <div className="border-r border-border-subtle bg-surface px-4 py-3.5 md:border-b-0">
@@ -622,12 +604,12 @@ export default function ProductDetail() {
                     <Button variant="primary" size="sm" onClick={saveSyncSchedule} disabled={savingSchedule || !syncSchedule.match(/^\d{2}:\d{2}$/)}>
                       {savingSchedule ? 'Saving…' : 'Save'}
                     </Button>
-                    <Button variant="secondary" size="sm" onClick={manualRefresh} disabled={refreshing}>
-                      {refreshing ? 'Syncing…' : 'Refresh now'}
+                    <Button variant="secondary" size="sm" onClick={() => router.push('/dashboard?add=1')} title="Re-connect to refresh — credentials are never stored">
+                      Re-connect
                     </Button>
                   </div>
                 </div>
-                <p className="text-[10px] text-text-tertiary mt-3">External cron service will automatically trigger refreshes at this time daily.</p>
+                <p className="text-[10px] text-text-tertiary mt-3">Scheduled syncs require an external cron service. Credentials are never stored — re-connect from the dashboard to refresh manually.</p>
               </div>
             </div>
           )}
@@ -671,7 +653,7 @@ export default function ProductDetail() {
               raw={data.lineage.raw}
               etl={{
                 ...data.lineage.etl,
-                description: `${data.sourceType === 'postgres' ? 'PostgreSQL' : 'CSV'} connector · on ${data.sourceType === 'postgres' ? 'connect' : 'upload'} · stores ${data.profile.sampledRows.toLocaleString()} sample rows`,
+                description: `${{ csv: 'CSV', postgres: 'PostgreSQL', snowflake: 'Snowflake', bigquery: 'BigQuery', s3: 'S3', gcs: 'GCS' }[data.sourceType]} connector · on ${data.sourceType === 'csv' ? 'upload' : 'connect'} · stores ${data.profile.sampledRows.toLocaleString()} sample rows`,
               }}
               transform={{
                 ...data.lineage.transform,

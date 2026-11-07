@@ -109,7 +109,7 @@ export function Sidebar({
       </div>
 
       <div className="mt-auto pt-6">
-        <p className="mb-3 px-1 text-xs leading-5 text-text-tertiary">CSV and PostgreSQL snapshots are available.</p>
+        <p className="mb-3 px-1 text-xs leading-5 text-text-tertiary">CSV, PostgreSQL, Snowflake, BigQuery, S3, and GCS sources available.</p>
         <Button variant="primary" onClick={onAddDataset} className="w-full justify-center">
           <span aria-hidden="true" className="mr-2">+</span>Add data product
         </Button>

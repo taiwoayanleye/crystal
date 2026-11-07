@@ -17,7 +17,7 @@ interface Dataset {
   outcomeScore: number
   hypothesis: string
   status: string
-  sourceType: 'csv' | 'postgres'
+  sourceType: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   rowCount: number
   lastSyncAt: string
 }
@@ -52,7 +52,14 @@ function PortfolioSummary({ datasets }: { datasets: Dataset[] }) {
     },
     {
       label: 'Sources',
-      value: `${datasets.filter((dataset) => dataset.sourceType === 'csv').length} CSV · ${datasets.filter((dataset) => dataset.sourceType === 'postgres').length} Postgres`,
+      value: (() => {
+        const counts: Record<string, number> = {}
+        for (const d of datasets) {
+          const label = d.sourceType === 'postgres' ? 'PG' : d.sourceType.toUpperCase()
+          counts[label] = (counts[label] || 0) + 1
+        }
+        return Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(' · ')
+      })(),
       icon: '↔',
       tone: 'navy',
     },
