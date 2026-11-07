@@ -19,6 +19,8 @@ interface Dataset {
   hypothesis: string
   status: string
   sourceType: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
+  syncStatus: 'fresh' | 'stale' | 'syncing' | 'error'
+  syncSchedule: string | null
   rowCount: number
   lastSyncAt: string
 }
@@ -281,6 +283,7 @@ export default function Dashboard() {
                     icon={dataset.icon}
                     title={dataset.title}
                     sourceType={dataset.sourceType}
+                    syncStatus={dataset.syncStatus}
                     rowCount={dataset.rowCount}
                     lastSyncAt={dataset.lastSyncAt}
                     qualityScore={dataset.qualityScore}

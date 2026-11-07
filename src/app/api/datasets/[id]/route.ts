@@ -53,6 +53,8 @@ export async function GET(
       users: dataset.users,
       sourceType: dataset.sourceType,
       lastSyncAt: dataset.lastSyncAt,
+      syncSchedule: dataset.syncSchedule,
+      syncStatus: dataset.syncStatus,
       schema: dataset.schema,
       metadata: dataset.metadata,
       successMetrics: dataset.successMetrics,

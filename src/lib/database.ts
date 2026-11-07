@@ -33,6 +33,7 @@ interface DatasetRow {
   updated_at: string
   last_sync_at: string
   sync_schedule: string | null
+  sync_status: 'fresh' | 'stale' | 'syncing' | 'error'
 }
 
 const ICONS = ['📊', '📈', '📦', '🧬', '💊', '🔬']
@@ -97,6 +98,7 @@ async function bootstrap(): Promise<void> {
   await sql`ALTER TABLE datasets ALTER COLUMN last_sync_at SET DEFAULT now()`
   await sql`ALTER TABLE datasets ALTER COLUMN last_sync_at SET NOT NULL`
   await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS sync_schedule TEXT`
+  await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS sync_status TEXT NOT NULL DEFAULT 'fresh'`
   await sql`
     CREATE TABLE IF NOT EXISTS syncs (
       id TEXT PRIMARY KEY,
@@ -226,6 +228,7 @@ function toDataset(r: DatasetRow): Dataset {
     updatedAt: new Date(r.updated_at).toISOString(),
     lastSyncAt: new Date(r.last_sync_at).toISOString(),
     syncSchedule: r.sync_schedule ?? null,
+    syncStatus: r.sync_status ?? 'fresh',
   }
 }
 
@@ -297,7 +300,7 @@ export async function updateOutcome(id: string, outcome: OutcomeMetrics): Promis
 // All columns except the heavy `rows` JSONB, which list/detail never use
 // (only getDatasetRows needs it). Keeping it out avoids shipping hundreds of
 // sample rows over Neon's HTTP driver on every list/detail read.
-const COLS = `id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at, last_sync_at`
+const COLS = `id, name, icon, source_type, success_metrics, problem_statement, users, schema, metadata, quality, outcome, usage_count, created_at, updated_at, last_sync_at, sync_schedule, sync_status`
 
 export async function getAllDatasets(): Promise<DatasetWithMetrics[]> {
   await ensureReady()
@@ -405,6 +408,29 @@ export async function getSyncHistory(datasetId: string, limit = 50): Promise<Arr
   }))
 }
 
+export async function updateSyncStatus(id: string, status: 'fresh' | 'stale' | 'syncing' | 'error'): Promise<boolean> {
+  await ensureReady()
+  const sql = getSql()
+  const updated = (await sql`
+    UPDATE datasets SET sync_status = ${status}, updated_at = now()
+    WHERE id = ${id} RETURNING id
+  `) as { id: string }[]
+  return updated.length > 0
+}
+
+export async function markScheduledDatasetsStale(hour: string): Promise<string[]> {
+  await ensureReady()
+  const sql = getSql()
+  const rows = (await sql`
+    UPDATE datasets SET sync_status = 'stale', updated_at = now()
+    WHERE sync_schedule IS NOT NULL
+      AND split_part(sync_schedule, ':', 1) = ${hour}
+      AND sync_status = 'fresh'
+    RETURNING id
+  `) as { id: string }[]
+  return rows.map(r => r.id)
+}
+
 export async function updateDatasetFromIngest(input: {
   id: string
   result: {
@@ -422,6 +448,7 @@ export async function updateDatasetFromIngest(input: {
         rows = ${JSON.stringify(input.result.rows)},
         metadata = ${JSON.stringify({ rowCount: input.result.rowCount, columnCount: input.result.schema.length })},
         quality = ${JSON.stringify(input.quality)},
+        sync_status = 'fresh',
         updated_at = now(),
         last_sync_at = now()
     WHERE id = ${input.id}

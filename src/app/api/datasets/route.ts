@@ -29,6 +29,8 @@ export async function GET() {
       createdAt: dataset.createdAt,
       updatedAt: dataset.updatedAt,
       lastSyncAt: dataset.lastSyncAt,
+      syncStatus: dataset.syncStatus,
+      syncSchedule: dataset.syncSchedule,
       rowCount: dataset.metadata.rowCount,
       columnCount: dataset.metadata.columnCount,
     }))

@@ -34,6 +34,7 @@ export interface Dataset {
   updatedAt: string
   lastSyncAt: string
   syncSchedule: string | null
+  syncStatus: 'fresh' | 'stale' | 'syncing' | 'error'
 }
 
 export interface DatasetMetrics {

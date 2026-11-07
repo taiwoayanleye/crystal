@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDataset } from '@/lib/database'
+import { getDataset, updateSyncStatus } from '@/lib/database'
 import { logSync, updateDatasetFromIngest } from '@/lib/database'
 import { getConnector } from '@/lib/connectors'
 import { calculateQualityMetrics } from '@/lib/metrics'
@@ -56,6 +56,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unsupported source type' }, { status: 400 })
     }
 
+    await updateSyncStatus(id, 'syncing')
     const result = await connector.ingest(500)
 
     if (result.schema.length === 0) {
@@ -98,12 +99,13 @@ export async function POST(
     })
   } catch (error) {
     const datasetId = params.id
+    await updateSyncStatus(datasetId, 'error').catch(() => {})
     await logSync({
       datasetId,
       status: 'error',
       rowsSynced: 0,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
-    }).catch(() => {}) // Ignore logging errors
+    }).catch(() => {})
 
     console.error('Refresh error:', error)
     return NextResponse.json(

@@ -59,6 +59,7 @@ interface DetailData {
   sourceType: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   lastSyncAt: string
   syncSchedule?: string | null
+  syncStatus?: 'fresh' | 'stale' | 'syncing' | 'error'
 }
 
 function qualityColor(value: number): 'success' | 'warning' | 'error' {
@@ -590,6 +591,18 @@ export default function ProductDetail() {
             <div className="mb-8">
               <h2 className="font-heading text-lg font-semibold text-text-primary mb-4">Sync schedule</h2>
               <div className="rounded-lg border border-border-subtle bg-surface p-4">
+                {data.syncStatus && data.syncStatus !== 'fresh' && (
+                  <div className={`mb-4 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${
+                    data.syncStatus === 'stale' ? 'bg-warning-dim text-data-amber' :
+                    data.syncStatus === 'syncing' ? 'bg-bg-elevated text-accent' :
+                    'bg-error-dim text-error'
+                  }`}>
+                    <span aria-hidden="true">{data.syncStatus === 'stale' ? '⏳' : data.syncStatus === 'syncing' ? '↻' : '⚠'}</span>
+                    {data.syncStatus === 'stale' && 'This dataset is due for a refresh. Re-connect to update.'}
+                    {data.syncStatus === 'syncing' && 'Sync in progress…'}
+                    {data.syncStatus === 'error' && 'Last sync failed. Re-connect to retry.'}
+                  </div>
+                )}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-3">
                   <div className="flex-1">
                     <label className="text-xs text-text-secondary block mb-2">Daily refresh time (UTC)</label>
@@ -597,7 +610,7 @@ export default function ProductDetail() {
                       type="time"
                       value={syncSchedule}
                       onChange={(e) => setSyncSchedule(e.target.value)}
-                      className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="w-full px-3 py-2 border border-border-subtle rounded-md text-sm bg-bg-base text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -609,7 +622,7 @@ export default function ProductDetail() {
                     </Button>
                   </div>
                 </div>
-                <p className="text-[10px] text-text-tertiary mt-3">Scheduled syncs require an external cron service. Credentials are never stored — re-connect from the dashboard to refresh manually.</p>
+                <p className="text-[10px] text-text-tertiary mt-3">At the scheduled hour, this dataset is marked stale. Credentials are never stored — re-connect from the dashboard to refresh.</p>
               </div>
             </div>
           )}

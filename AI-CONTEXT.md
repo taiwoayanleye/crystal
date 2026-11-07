@@ -322,48 +322,49 @@ Updated the landing page to showcase all Crystal capabilities and value proposit
 - Build: ✓
 - Commit: `c194463`
 
-## In Progress — Scheduled sync infrastructure (TAI-32 - Part 1) (2026-11-07)
+## Completed — Scheduled syncs with staleness tracking (TAI-32) (2026-11-07)
 
-Implemented API infrastructure for daily dataset refresh scheduling with external cron support.
+Implemented full scheduled sync infrastructure with Vercel Cron, staleness tracking, and UI indicators.
 
 **What was built:**
-- Database schema: `sync_schedule` column on datasets, new `syncs` table for history
-- **GET /api/cron/sync** — returns datasets scheduled to sync at current UTC hour (callable by external scheduler)
-- **POST /api/refresh/[id]** — manually trigger refresh with connector config (re-ingests, updates dataset, logs results)
-- **PATCH /api/datasets/[id]/sync** — set daily sync time (e.g., "09:00" UTC)
-- **GET /api/datasets/[id]/sync** — retrieve sync history (status, row counts, errors)
-- Database functions: setSyncSchedule, logSync, getSyncHistory, updateDatasetFromIngest
 
-**Technical implementation:**
-- Daily schedules stored as UTC times ("HH:MM" format)
-- External cron service (EasyCron, AWS EventBridge, etc.) polls /api/cron/sync hourly
-- Cron endpoint returns list of datasets ready for sync
-- Service then calls POST /api/refresh/[id] for each dataset
-- Each refresh: re-ingests → updates metrics → logs result
+*Backend:*
+- `sync_status` column on datasets (values: `fresh`, `stale`, `syncing`, `error`)
+- `markScheduledDatasetsStale(hour)` — bulk-marks datasets whose schedule matches the current UTC hour
+- `updateSyncStatus(id, status)` — individual status transitions
+- Updated `updateDatasetFromIngest` to reset status to `fresh` after successful re-ingest
+- Cron endpoint (`GET /api/cron/sync`) now marks datasets stale instead of returning a list for external polling
+- Refresh endpoint (`POST /api/refresh/[id]`) sets `syncing` before ingest and `error` on failure
+- `vercel.json` created with hourly cron: `0 * * * *` → `/api/cron/sync`
+- Both list (`/api/datasets`) and detail (`/api/datasets/[id]`) APIs return `syncStatus` and `syncSchedule`
+
+*Frontend:*
+- MetricCard shows `Stale`, `Syncing`, or `Error` badges next to the source/row/date subtitle
+- Detail page sync schedule section shows a status banner when stale/syncing/error with contextual messaging
+- Badges use existing design tokens (`warning-dim`, `error-dim`, `bg-elevated`)
+
+**Architectural decision:** Credentials are never stored (snapshot-at-connect). Scheduled syncs mark datasets as *stale* at the scheduled hour, prompting the user to re-connect from the dashboard to refresh. This is a deliberate trade-off: fully automated refresh would require credential storage, which conflicts with the security architecture.
 
 **Validation:**
-- TypeScript: ✓
+- TypeScript: ✓ (`npx tsc --noEmit` clean)
 - Tests: 20/20 passing ✓
-- Build: ✓
-- Commit: `37ff454`
+- Browser: dashboard and detail pages render correctly; CSV datasets correctly hide sync schedule section
 
-**Remaining for TAI-32:**
-- UI to set sync schedules on detail page
-- UI to view sync history (last sync time, status, error details)
-- Optional: retry logic with exponential backoff
-- Optional: expand to hourly/weekly frequencies (currently daily only)
+**Changed files:**
+- `src/lib/types.ts` — added `syncStatus` to `Dataset`
+- `src/lib/database.ts` — `sync_status` column, `markScheduledDatasetsStale`, `updateSyncStatus`, COLS updated
+- `src/app/api/cron/sync/route.ts` — rewritten to use `markScheduledDatasetsStale`
+- `src/app/api/datasets/route.ts` — returns `syncStatus`, `syncSchedule`
+- `src/app/api/datasets/[id]/route.ts` — returns `syncStatus`, `syncSchedule`
+- `src/app/api/refresh/[id]/route.ts` — status transitions (`syncing` → `fresh`/`error`)
+- `src/app/dashboard/page.tsx` — passes `syncStatus` to MetricCard
+- `src/app/detail/[id]/page.tsx` — sync status banner in schedule section
+- `src/components/MetricCard.tsx` — sync status badges
+- `vercel.json` — hourly cron config
 
 ## Next steps (product backlog)
 
-1. **TAI-32 UI completion:** Add schedule configuration and sync history views to detail page
-   - Time picker for setting daily sync schedule (UTC)
-   - Sync history panel showing past sync events, status, error messages
-   - Manual refresh button with loading state
-2. **Format support expansion:** JSON and Parquet file format support
-   - S3 and GCS connectors can be extended with format detection
-   - CSV is the current baseline for all cloud storage ingestion
-3. **Backlog features:** Real telemetry, PostgreSQL AI autofill, integration tests, CI
+1. **Format support expansion:** JSON and Parquet file format support for S3/GCS connectors
 2. **Infrastructure:** Separate Neon dev database; add integration/API tests + CI
-3. **PostgreSQL AI autofill:** Enable "Autofill with AI" for database sources (TAI-26 prerequisite done)
-4. **Real signals:** Replace illustrative usage/trend when query logs available
-5. **Phase 3:** SaaS connectors (Stripe, Salesforce, HubSpot), query editor, scheduled syncs, dbt
+3. **Real signals:** Replace illustrative usage/trend when query logs available
+4. **Phase 3:** SaaS connectors (Stripe, Salesforce, HubSpot), query editor, dbt
