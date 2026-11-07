@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getConnector } from '@/lib/connectors'
 import { PostgresConfig } from '@/lib/connectors/postgres'
 import { SnowflakeConfig } from '@/lib/connectors/snowflake'
+import { BigQueryConfig } from '@/lib/connectors/bigquery'
 import { saveIngestResult } from '@/lib/ingestion'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/connect
- * Ingest a non-file data source (Phase 2). Supports PostgreSQL and Snowflake.
+ * Ingest a non-file data source (Phase 2). Supports PostgreSQL, Snowflake, and BigQuery.
  * Snapshot-at-connect: reads schema + a sample, computes quality, persists a
  * dataset. Connection credentials are used only for this request, never stored.
  */
@@ -85,9 +86,43 @@ export async function POST(request: NextRequest) {
         },
         { status: 201 }
       )
+    } else if (sourceType === 'bigquery') {
+      const cfg = connection as BigQueryConfig
+      for (const field of ['projectId', 'datasetId', 'tableId', 'serviceAccountJson'] as const) {
+        if (!cfg?.[field]) {
+          return NextResponse.json({ error: `Missing connection field: ${field}` }, { status: 400 })
+        }
+      }
+
+      const connector = getConnector('bigquery', cfg)
+      const result = await connector.ingest(500)
+      if (result.schema.length === 0) {
+        return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
+      }
+
+      const { datasetId } = await saveIngestResult({
+        result,
+        sourceType: connector.sourceType,
+        name: typeof name === 'string' ? name : undefined,
+        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
+        problemStatement: problemStatement || `BigQuery table: ${result.name}`,
+        users: users || 'Data team',
+        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          datasetId,
+          rowCount: result.rowCount,
+          columnCount: result.schema.length,
+          schema: result.schema,
+        },
+        { status: 201 }
+      )
     } else {
       return NextResponse.json(
-        { error: `Unsupported source type: ${sourceType}. Supported: postgres, snowflake` },
+        { error: `Unsupported source type: ${sourceType}. Supported: postgres, snowflake, bigquery` },
         { status: 400 }
       )
     }

@@ -19,7 +19,7 @@ export interface Dataset {
   id: string
   name: string
   icon: string
-  sourceType: 'csv' | 'postgres' | 'snowflake'
+  sourceType: 'csv' | 'postgres' | 'snowflake' | 'bigquery'
   problemStatement: string
   users: string
   schema: string[]
