@@ -140,41 +140,31 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
         <div className="mx-auto max-w-4xl">
-          <div className="grid md:grid-cols-3 gap-8 sm:gap-12">
+          <div className="grid md:grid-cols-2 gap-8 sm:gap-12">
             {[
+              {
+                icon: '🔌',
+                title: 'Connect Anywhere',
+                description: 'Ingest from CSV, PostgreSQL, Snowflake, BigQuery, S3, or GCS. One unified interface for all enterprise data sources.',
+              },
               {
                 icon: '✨',
                 title: 'AI Autofill',
-                description: 'Connect a source and Claude instantly generates a name, problem statement, and success metrics tailored to your data.',
+                description: 'Claude analyzes your data and auto-generates dataset names, problem statements, and success metrics in seconds.',
               },
               {
                 icon: '⏰',
-                title: 'Scheduled Syncs',
-                description: 'Set a daily refresh time. Crystal keeps your datasets fresh without manual intervention. Full sync history included.',
+                title: 'Keep Data Fresh',
+                description: 'Set daily refresh schedules. Automatic syncs with full history, error tracking, and manual refresh on demand.',
               },
               {
                 icon: '📊',
                 title: 'Quality Signals',
-                description: 'Freshness, completeness, and accuracy scores updated on every sync. Track data product health in real time.',
-              },
-              {
-                icon: '🎯',
-                title: 'Outcome Tracking',
-                description: 'Document the business impact of each dataset. Record hypothesis, status, and measured outcomes as they evolve.',
-              },
-              {
-                icon: '📈',
-                title: 'Usage Insights',
-                description: 'See how your team is using each dataset. Adoption metrics help justify investment and improve data products.',
-              },
-              {
-                icon: '🔗',
-                title: 'Data Lineage',
-                description: 'Understand the path from source to dataset to decision. One-click links to schema, sample rows, and schemas.',
+                description: 'Real-time freshness, completeness, and accuracy scores. Know the health of each dataset at a glance.',
               },
             ].map(({ icon, title, description }) => (
               <div key={title} className="flex flex-col gap-3">
-                <span className="text-3xl" aria-hidden="true">{icon}</span>
+                <span className="text-4xl" aria-hidden="true">{icon}</span>
                 <h3 className="font-heading text-lg font-semibold text-text-primary">{title}</h3>
                 <p className="text-sm text-text-secondary leading-6">{description}</p>
               </div>
