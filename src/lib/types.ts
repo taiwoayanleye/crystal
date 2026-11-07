@@ -33,6 +33,7 @@ export interface Dataset {
   createdAt: string
   updatedAt: string
   lastSyncAt: string
+  syncSchedule: string | null
 }
 
 export interface DatasetMetrics {

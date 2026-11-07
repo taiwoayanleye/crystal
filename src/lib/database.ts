@@ -32,6 +32,7 @@ interface DatasetRow {
   created_at: string
   updated_at: string
   last_sync_at: string
+  sync_schedule: string | null
 }
 
 const ICONS = ['📊', '📈', '📦', '🧬', '💊', '🔬']
@@ -95,6 +96,18 @@ async function bootstrap(): Promise<void> {
   await sql`UPDATE datasets SET last_sync_at = created_at WHERE last_sync_at IS NULL`
   await sql`ALTER TABLE datasets ALTER COLUMN last_sync_at SET DEFAULT now()`
   await sql`ALTER TABLE datasets ALTER COLUMN last_sync_at SET NOT NULL`
+  await sql`ALTER TABLE datasets ADD COLUMN IF NOT EXISTS sync_schedule TEXT`
+  await sql`
+    CREATE TABLE IF NOT EXISTS syncs (
+      id TEXT PRIMARY KEY,
+      dataset_id TEXT NOT NULL REFERENCES datasets(id) ON DELETE CASCADE,
+      status TEXT NOT NULL,
+      rows_synced INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    )
+  `
   const [{ count }] = (await sql`SELECT count(*)::int AS count FROM datasets`) as { count: number }[]
   if (count === 0) await seed()
 }
@@ -212,6 +225,7 @@ function toDataset(r: DatasetRow): Dataset {
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
     lastSyncAt: new Date(r.last_sync_at).toISOString(),
+    syncSchedule: r.sync_schedule ?? null,
   }
 }
 
@@ -322,4 +336,94 @@ export async function incrementUsageCount(id: string): Promise<void> {
   await ensureReady()
   const sql = getSql()
   await sql`UPDATE datasets SET usage_count = usage_count + 1, updated_at = now() WHERE id = ${id}`
+}
+
+export async function setSyncSchedule(id: string, schedule: string | null): Promise<boolean> {
+  await ensureReady()
+  const sql = getSql()
+  const updated = (await sql`
+    UPDATE datasets SET sync_schedule = ${schedule}, updated_at = now()
+    WHERE id = ${id} RETURNING id
+  `) as { id: string }[]
+  return updated.length > 0
+}
+
+export async function getDatasetsSyncScheduled(): Promise<DatasetWithMetrics[]> {
+  await ensureReady()
+  const sql = getSql()
+  const rows = (await sql.query(
+    `SELECT ${COLS} FROM datasets WHERE sync_schedule IS NOT NULL ORDER BY created_at DESC`
+  )) as DatasetRow[]
+  return rows.map(toWithMetrics)
+}
+
+export async function logSync(input: {
+  datasetId: string
+  status: 'success' | 'error'
+  rowsSynced: number
+  errorMessage?: string
+}): Promise<void> {
+  await ensureReady()
+  const sql = getSql()
+  const syncId = `sync_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  await sql`
+    INSERT INTO syncs (id, dataset_id, status, rows_synced, error_message, started_at, completed_at)
+    VALUES (
+      ${syncId}, ${input.datasetId}, ${input.status}, ${input.rowsSynced},
+      ${input.errorMessage || null}, now(), now()
+    )
+  `
+  await sql`UPDATE datasets SET last_sync_at = now(), updated_at = now() WHERE id = ${input.datasetId}`
+}
+
+export async function getSyncHistory(datasetId: string, limit = 50): Promise<Array<{
+  id: string
+  status: string
+  rowsSynced: number
+  errorMessage: string | null
+  completedAt: string
+}>> {
+  await ensureReady()
+  const sql = getSql()
+  const rows = (await sql`
+    SELECT id, status, rows_synced, error_message, completed_at
+    FROM syncs WHERE dataset_id = ${datasetId}
+    ORDER BY completed_at DESC LIMIT ${limit}
+  `) as Array<{
+    id: string
+    status: string
+    rows_synced: number
+    error_message: string | null
+    completed_at: string
+  }>
+  return rows.map(r => ({
+    id: r.id,
+    status: r.status,
+    rowsSynced: r.rows_synced,
+    errorMessage: r.error_message,
+    completedAt: new Date(r.completed_at).toISOString(),
+  }))
+}
+
+export async function updateDatasetFromIngest(input: {
+  id: string
+  result: {
+    schema: string[]
+    rows: Record<string, any>[]
+    rowCount: number
+  }
+  quality: QualityMetrics
+}): Promise<void> {
+  await ensureReady()
+  const sql = getSql()
+  await sql`
+    UPDATE datasets
+    SET schema = ${JSON.stringify(input.result.schema)},
+        rows = ${JSON.stringify(input.result.rows)},
+        metadata = ${JSON.stringify({ rowCount: input.result.rowCount, columnCount: input.result.schema.length })},
+        quality = ${JSON.stringify(input.quality)},
+        updated_at = now(),
+        last_sync_at = now()
+    WHERE id = ${input.id}
+  `
 }
