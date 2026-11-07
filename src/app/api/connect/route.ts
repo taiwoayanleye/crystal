@@ -6,6 +6,7 @@ import { BigQueryConfig } from '@/lib/connectors/bigquery'
 import { S3Config } from '@/lib/connectors/s3'
 import { GCSConfig } from '@/lib/connectors/gcs'
 import { saveIngestResult } from '@/lib/ingestion'
+import { analyzeDataset } from '@/lib/claude'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,11 +15,14 @@ export const dynamic = 'force-dynamic'
  * Ingest a non-file data source (Phase 2). Supports PostgreSQL, Snowflake, BigQuery, S3, and GCS.
  * Snapshot-at-connect: reads schema + a sample, computes quality, persists a
  * dataset. Connection credentials are used only for this request, never stored.
+ *
+ * Query param: ?analyze=true to generate AI suggestions for name/problem/users/metrics
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { sourceType, problemStatement, users, connection, successMetrics, name, icon } = body
+    const analyze = request.nextUrl.searchParams.get('analyze') === 'true'
 
     if (sourceType === 'postgres') {
       const cfg = connection as PostgresConfig
@@ -34,14 +38,35 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
       }
 
+      // Generate AI suggestions if requested
+      let aiSuggestions = null
+      if (analyze) {
+        try {
+          const analysis = await analyzeDataset({
+            schema: result.schema,
+            sampleRows: result.rows,
+            problemStatement,
+          })
+          aiSuggestions = {
+            name: analysis.name,
+            icon: analysis.icon,
+            problemStatement: analysis.problemStatement,
+            users: analysis.users,
+            metrics: analysis.metrics.map((m: any) => m.name),
+          }
+        } catch (err) {
+          console.warn('AI analysis failed (continuing without):', err)
+        }
+      }
+
       const { datasetId } = await saveIngestResult({
         result,
         sourceType: connector.sourceType,
-        name: typeof name === 'string' ? name : undefined,
-        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
-        problemStatement: problemStatement || `PostgreSQL table: ${result.name}`,
-        users: users || 'Data team',
-        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+        name: aiSuggestions?.name || (typeof name === 'string' ? name : undefined),
+        icon: aiSuggestions?.icon || (typeof icon === 'string' ? icon.trim() || undefined : undefined),
+        problemStatement: aiSuggestions?.problemStatement || problemStatement || `PostgreSQL table: ${result.name}`,
+        users: aiSuggestions?.users || users || 'Data team',
+        successMetrics: aiSuggestions?.metrics || (Array.isArray(successMetrics) ? successMetrics : []),
       })
 
       return NextResponse.json(
@@ -51,6 +76,7 @@ export async function POST(request: NextRequest) {
           rowCount: result.rowCount,
           columnCount: result.schema.length,
           schema: result.schema,
+          suggestions: aiSuggestions,
         },
         { status: 201 }
       )
@@ -68,14 +94,34 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
       }
 
+      let aiSuggestions = null
+      if (analyze) {
+        try {
+          const analysis = await analyzeDataset({
+            schema: result.schema,
+            sampleRows: result.rows,
+            problemStatement,
+          })
+          aiSuggestions = {
+            name: analysis.name,
+            icon: analysis.icon,
+            problemStatement: analysis.problemStatement,
+            users: analysis.users,
+            metrics: analysis.metrics.map((m: any) => m.name),
+          }
+        } catch (err) {
+          console.warn('AI analysis failed (continuing without):', err)
+        }
+      }
+
       const { datasetId } = await saveIngestResult({
         result,
         sourceType: connector.sourceType,
-        name: typeof name === 'string' ? name : undefined,
-        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
-        problemStatement: problemStatement || `Snowflake table: ${result.name}`,
-        users: users || 'Data team',
-        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+        name: aiSuggestions?.name || (typeof name === 'string' ? name : undefined),
+        icon: aiSuggestions?.icon || (typeof icon === 'string' ? icon.trim() || undefined : undefined),
+        problemStatement: aiSuggestions?.problemStatement || problemStatement || `Snowflake table: ${result.name}`,
+        users: aiSuggestions?.users || users || 'Data team',
+        successMetrics: aiSuggestions?.metrics || (Array.isArray(successMetrics) ? successMetrics : []),
       })
 
       return NextResponse.json(
@@ -85,6 +131,7 @@ export async function POST(request: NextRequest) {
           rowCount: result.rowCount,
           columnCount: result.schema.length,
           schema: result.schema,
+          suggestions: aiSuggestions,
         },
         { status: 201 }
       )
@@ -102,14 +149,34 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
       }
 
+      let aiSuggestions = null
+      if (analyze) {
+        try {
+          const analysis = await analyzeDataset({
+            schema: result.schema,
+            sampleRows: result.rows,
+            problemStatement,
+          })
+          aiSuggestions = {
+            name: analysis.name,
+            icon: analysis.icon,
+            problemStatement: analysis.problemStatement,
+            users: analysis.users,
+            metrics: analysis.metrics.map((m: any) => m.name),
+          }
+        } catch (err) {
+          console.warn('AI analysis failed (continuing without):', err)
+        }
+      }
+
       const { datasetId } = await saveIngestResult({
         result,
         sourceType: connector.sourceType,
-        name: typeof name === 'string' ? name : undefined,
-        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
-        problemStatement: problemStatement || `BigQuery table: ${result.name}`,
-        users: users || 'Data team',
-        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+        name: aiSuggestions?.name || (typeof name === 'string' ? name : undefined),
+        icon: aiSuggestions?.icon || (typeof icon === 'string' ? icon.trim() || undefined : undefined),
+        problemStatement: aiSuggestions?.problemStatement || problemStatement || `BigQuery table: ${result.name}`,
+        users: aiSuggestions?.users || users || 'Data team',
+        successMetrics: aiSuggestions?.metrics || (Array.isArray(successMetrics) ? successMetrics : []),
       })
 
       return NextResponse.json(
@@ -119,6 +186,7 @@ export async function POST(request: NextRequest) {
           rowCount: result.rowCount,
           columnCount: result.schema.length,
           schema: result.schema,
+          suggestions: aiSuggestions,
         },
         { status: 201 }
       )
@@ -136,14 +204,34 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
       }
 
+      let aiSuggestions = null
+      if (analyze) {
+        try {
+          const analysis = await analyzeDataset({
+            schema: result.schema,
+            sampleRows: result.rows,
+            problemStatement,
+          })
+          aiSuggestions = {
+            name: analysis.name,
+            icon: analysis.icon,
+            problemStatement: analysis.problemStatement,
+            users: analysis.users,
+            metrics: analysis.metrics.map((m: any) => m.name),
+          }
+        } catch (err) {
+          console.warn('AI analysis failed (continuing without):', err)
+        }
+      }
+
       const { datasetId } = await saveIngestResult({
         result,
         sourceType: connector.sourceType,
-        name: typeof name === 'string' ? name : undefined,
-        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
-        problemStatement: problemStatement || `S3 file: ${result.name}`,
-        users: users || 'Data team',
-        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+        name: aiSuggestions?.name || (typeof name === 'string' ? name : undefined),
+        icon: aiSuggestions?.icon || (typeof icon === 'string' ? icon.trim() || undefined : undefined),
+        problemStatement: aiSuggestions?.problemStatement || problemStatement || `S3 file: ${result.name}`,
+        users: aiSuggestions?.users || users || 'Data team',
+        successMetrics: aiSuggestions?.metrics || (Array.isArray(successMetrics) ? successMetrics : []),
       })
 
       return NextResponse.json(
@@ -153,6 +241,7 @@ export async function POST(request: NextRequest) {
           rowCount: result.rowCount,
           columnCount: result.schema.length,
           schema: result.schema,
+          suggestions: aiSuggestions,
         },
         { status: 201 }
       )
@@ -170,14 +259,34 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
       }
 
+      let aiSuggestions = null
+      if (analyze) {
+        try {
+          const analysis = await analyzeDataset({
+            schema: result.schema,
+            sampleRows: result.rows,
+            problemStatement,
+          })
+          aiSuggestions = {
+            name: analysis.name,
+            icon: analysis.icon,
+            problemStatement: analysis.problemStatement,
+            users: analysis.users,
+            metrics: analysis.metrics.map((m: any) => m.name),
+          }
+        } catch (err) {
+          console.warn('AI analysis failed (continuing without):', err)
+        }
+      }
+
       const { datasetId } = await saveIngestResult({
         result,
         sourceType: connector.sourceType,
-        name: typeof name === 'string' ? name : undefined,
-        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
-        problemStatement: problemStatement || `GCS file: ${result.name}`,
-        users: users || 'Data team',
-        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+        name: aiSuggestions?.name || (typeof name === 'string' ? name : undefined),
+        icon: aiSuggestions?.icon || (typeof icon === 'string' ? icon.trim() || undefined : undefined),
+        problemStatement: aiSuggestions?.problemStatement || problemStatement || `GCS file: ${result.name}`,
+        users: aiSuggestions?.users || users || 'Data team',
+        successMetrics: aiSuggestions?.metrics || (Array.isArray(successMetrics) ? successMetrics : []),
       })
 
       return NextResponse.json(
@@ -187,6 +296,7 @@ export async function POST(request: NextRequest) {
           rowCount: result.rowCount,
           columnCount: result.schema.length,
           schema: result.schema,
+          suggestions: aiSuggestions,
         },
         { status: 201 }
       )
