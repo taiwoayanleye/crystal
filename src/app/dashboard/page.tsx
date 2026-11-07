@@ -145,24 +145,7 @@ export default function Dashboard() {
   const handleAddDataset = async (form: UploadSubmit) => {
     let response: Response
 
-    if (form.sourceType === 'postgres') {
-      response = await fetch('/api/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourceType: 'postgres',
-          name: form.name,
-          icon: form.icon,
-          problemStatement: form.problemStatement,
-          users: form.users,
-          successMetrics: form.successMetrics,
-          connection: {
-            ...form.connection,
-            port: Number(form.connection.port) || 5432,
-          },
-        }),
-      })
-    } else {
+    if (form.sourceType === 'csv') {
       const data = new FormData()
       if (form.file) data.append('file', form.file)
       data.append('name', form.name)
@@ -171,6 +154,23 @@ export default function Dashboard() {
       data.append('users', form.users)
       data.append('successMetrics', JSON.stringify(form.successMetrics))
       response = await fetch('/api/upload', { method: 'POST', body: data })
+    } else {
+      const connection = form.sourceType === 'postgres'
+        ? { ...form.connection, port: Number(form.connection.port) || 5432 }
+        : form.connection
+      response = await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceType: form.sourceType,
+          name: form.name,
+          icon: form.icon,
+          problemStatement: form.problemStatement,
+          users: form.users,
+          successMetrics: form.successMetrics,
+          connection,
+        }),
+      })
     }
 
     if (!response.ok) {

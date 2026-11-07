@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from './Button'
 import { parseCSV } from '@/lib/csvParser'
 
-export type SourceType = 'csv' | 'postgres'
+export type SourceType = 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
 
 export interface PostgresConnection {
   host: string
@@ -17,6 +17,37 @@ export interface PostgresConnection {
   ssl: boolean
 }
 
+export interface SnowflakeConnection {
+  accountId: string
+  user: string
+  password: string
+  warehouse: string
+  database: string
+  schema: string
+  table: string
+}
+
+export interface BigQueryConnection {
+  projectId: string
+  datasetId: string
+  tableId: string
+  serviceAccountJson: string
+}
+
+export interface S3Connection {
+  bucket: string
+  key: string
+  accessKeyId: string
+  secretAccessKey: string
+  region: string
+}
+
+export interface GCSConnection {
+  bucket: string
+  objectName: string
+  serviceAccountJson: string
+}
+
 export interface UploadSubmit {
   sourceType: SourceType
   name: string
@@ -24,7 +55,7 @@ export interface UploadSubmit {
   problemStatement: string
   users: string
   file: File | null
-  connection: PostgresConnection
+  connection: Record<string, any>
   successMetrics: string[]
 }
 
@@ -50,6 +81,37 @@ const EMPTY_PG: PostgresConnection = {
   ssl: true,
 }
 
+const EMPTY_SF: SnowflakeConnection = {
+  accountId: '',
+  user: '',
+  password: '',
+  warehouse: '',
+  database: '',
+  schema: 'PUBLIC',
+  table: '',
+}
+
+const EMPTY_BQ: BigQueryConnection = {
+  projectId: '',
+  datasetId: '',
+  tableId: '',
+  serviceAccountJson: '',
+}
+
+const EMPTY_S3: S3Connection = {
+  bucket: '',
+  key: '',
+  accessKeyId: '',
+  secretAccessKey: '',
+  region: 'us-east-1',
+}
+
+const EMPTY_GCS: GCSConnection = {
+  bucket: '',
+  objectName: '',
+  serviceAccountJson: '',
+}
+
 const DEFAULT_METRICS = ['Adoption %', 'Query Volume', 'Business Impact ($)']
 
 export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
@@ -61,6 +123,10 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
   const [users, setUsers] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [pg, setPg] = useState<PostgresConnection>(EMPTY_PG)
+  const [sf, setSf] = useState<SnowflakeConnection>(EMPTY_SF)
+  const [bq, setBq] = useState<BigQueryConnection>(EMPTY_BQ)
+  const [s3, setS3] = useState<S3Connection>(EMPTY_S3)
+  const [gcs, setGcs] = useState<GCSConnection>(EMPTY_GCS)
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_METRICS)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [analyzing, setAnalyzing] = useState(false)
@@ -79,6 +145,10 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
     setUsers('')
     setFile(null)
     setPg(EMPTY_PG)
+    setSf(EMPTY_SF)
+    setBq(EMPTY_BQ)
+    setS3(EMPTY_S3)
+    setGcs(EMPTY_GCS)
     setSelectedMetrics(DEFAULT_METRICS)
     setSuggestions([])
     setAiError(null)
@@ -135,11 +205,18 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
         setSuggestions(metrics)
         setSelectedMetrics((prev) => Array.from(new Set([...prev, ...metrics.map(metricLabel)])))
         setAnalyzed(true)
-      } else if (sourceType === 'postgres') {
+      } else {
+        const connectionMap: Record<string, any> = {
+          postgres: pg,
+          snowflake: sf,
+          bigquery: bq,
+          s3: s3,
+          gcs: gcs,
+        }
         const res = await fetch('/api/connect?analyze=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sourceType: 'postgres', connection: pg, problemStatement }),
+          body: JSON.stringify({ sourceType, connection: connectionMap[sourceType], problemStatement }),
         })
         if (!res.ok) throw new Error('Could not analyze the data')
         const { suggestions: sug } = await res.json()
@@ -170,20 +247,26 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
       setError('A CSV file is required')
       return
     }
-    if (sourceType === 'postgres') {
-      for (const [k, label] of [
-        ['host', 'Host'],
-        ['database', 'Database'],
-        ['user', 'User'],
-        ['password', 'Password'],
-        ['table', 'Table'],
-      ] as const) {
-        if (!pg[k].trim()) {
+
+    const requiredFields: Record<string, [Record<string, any>, Array<[string, string]>]> = {
+      postgres: [pg, [['host', 'Host'], ['database', 'Database'], ['user', 'User'], ['password', 'Password'], ['table', 'Table']]],
+      snowflake: [sf, [['accountId', 'Account ID'], ['user', 'User'], ['password', 'Password'], ['warehouse', 'Warehouse'], ['database', 'Database'], ['table', 'Table']]],
+      bigquery: [bq, [['projectId', 'Project ID'], ['datasetId', 'Dataset ID'], ['tableId', 'Table ID'], ['serviceAccountJson', 'Service account JSON']]],
+      s3: [s3, [['bucket', 'Bucket'], ['key', 'Object key'], ['accessKeyId', 'Access key ID'], ['secretAccessKey', 'Secret access key']]],
+      gcs: [gcs, [['bucket', 'Bucket'], ['objectName', 'Object name'], ['serviceAccountJson', 'Service account JSON']]],
+    }
+
+    if (requiredFields[sourceType]) {
+      const [conn, fields] = requiredFields[sourceType]
+      for (const [k, label] of fields) {
+        if (!String(conn[k] || '').trim()) {
           setError(`${label} is required`)
           return
         }
       }
     }
+
+    const connectionMap: Record<string, any> = { postgres: pg, snowflake: sf, bigquery: bq, s3: s3, gcs: gcs }
 
     setSubmitting(true)
     try {
@@ -194,7 +277,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
         problemStatement,
         users: users || 'Data team',
         file,
-        connection: pg,
+        connection: connectionMap[sourceType] || {},
         successMetrics: selectedMetrics,
       })
       reset()
@@ -210,6 +293,14 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
     'w-full rounded-md border border-border-default bg-surface px-3 py-2 text-small text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent'
   const setPgField = (k: keyof PostgresConnection, v: string | boolean) =>
     setPg((prev) => ({ ...prev, [k]: v }))
+  const setSfField = (k: keyof SnowflakeConnection, v: string) =>
+    setSf((prev) => ({ ...prev, [k]: v }))
+  const setBqField = (k: keyof BigQueryConnection, v: string) =>
+    setBq((prev) => ({ ...prev, [k]: v }))
+  const setS3Field = (k: keyof S3Connection, v: string) =>
+    setS3((prev) => ({ ...prev, [k]: v }))
+  const setGcsField = (k: keyof GCSConnection, v: string) =>
+    setGcs((prev) => ({ ...prev, [k]: v }))
 
   const sparkle = (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="flex-shrink-0">
@@ -250,6 +341,10 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
             >
               <option value="csv">CSV file</option>
               <option value="postgres">PostgreSQL database</option>
+              <option value="snowflake">Snowflake warehouse</option>
+              <option value="bigquery">BigQuery table</option>
+              <option value="s3">Amazon S3 (CSV)</option>
+              <option value="gcs">Google Cloud Storage (CSV)</option>
             </select>
           </div>
 
@@ -382,6 +477,158 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
             </div>
           )}
 
+          {sourceType === 'snowflake' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-small text-text-light block mb-1">Account ID</label>
+                <input className={inputCls} value={sf.accountId} onChange={(e) => setSfField('accountId', e.target.value)} placeholder="xy12345.us-east-1" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-small text-text-light block mb-1">User</label>
+                  <input className={inputCls} value={sf.user} onChange={(e) => setSfField('user', e.target.value)} placeholder="ANALYST" />
+                </div>
+                <div>
+                  <label className="text-small text-text-light block mb-1">Password</label>
+                  <input type="password" className={inputCls} value={sf.password} onChange={(e) => setSfField('password', e.target.value)} placeholder="••••••••" />
+                </div>
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Warehouse</label>
+                <input className={inputCls} value={sf.warehouse} onChange={(e) => setSfField('warehouse', e.target.value)} placeholder="COMPUTE_WH" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-small text-text-light block mb-1">Database</label>
+                  <input className={inputCls} value={sf.database} onChange={(e) => setSfField('database', e.target.value)} placeholder="ANALYTICS" />
+                </div>
+                <div>
+                  <label className="text-small text-text-light block mb-1">Schema</label>
+                  <input className={inputCls} value={sf.schema} onChange={(e) => setSfField('schema', e.target.value)} placeholder="PUBLIC" />
+                </div>
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Table</label>
+                <input className={inputCls} value={sf.table} onChange={(e) => setSfField('table', e.target.value)} placeholder="CUSTOMERS" />
+              </div>
+              <p className="text-small text-text-light">Credentials are used once to read schema and a sample — they are not stored.</p>
+              <Button
+                variant="secondary"
+                onClick={autofillWithAI}
+                disabled={analyzing || !sf.accountId || !sf.user || !sf.password || !sf.warehouse || !sf.database || !sf.table}
+                className="w-full"
+              >
+                {analyzing ? 'Analyzing…' : 'Autofill with AI'}
+              </Button>
+            </div>
+          )}
+
+          {sourceType === 'bigquery' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-small text-text-light block mb-1">Project ID</label>
+                <input className={inputCls} value={bq.projectId} onChange={(e) => setBqField('projectId', e.target.value)} placeholder="my-gcp-project" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-small text-text-light block mb-1">Dataset ID</label>
+                  <input className={inputCls} value={bq.datasetId} onChange={(e) => setBqField('datasetId', e.target.value)} placeholder="analytics" />
+                </div>
+                <div>
+                  <label className="text-small text-text-light block mb-1">Table ID</label>
+                  <input className={inputCls} value={bq.tableId} onChange={(e) => setBqField('tableId', e.target.value)} placeholder="events" />
+                </div>
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Service account JSON</label>
+                <textarea
+                  className={`${inputCls} min-h-[80px] font-mono text-xs`}
+                  value={bq.serviceAccountJson}
+                  onChange={(e) => setBqField('serviceAccountJson', e.target.value)}
+                  placeholder='{"type":"service_account","project_id":"...","private_key":"..."}'
+                  rows={3}
+                />
+              </div>
+              <p className="text-small text-text-light">Credentials are used once to read schema and a sample — they are not stored.</p>
+              <Button
+                variant="secondary"
+                onClick={autofillWithAI}
+                disabled={analyzing || !bq.projectId || !bq.datasetId || !bq.tableId || !bq.serviceAccountJson}
+                className="w-full"
+              >
+                {analyzing ? 'Analyzing…' : 'Autofill with AI'}
+              </Button>
+            </div>
+          )}
+
+          {sourceType === 's3' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-small text-text-light block mb-1">Bucket</label>
+                <input className={inputCls} value={s3.bucket} onChange={(e) => setS3Field('bucket', e.target.value)} placeholder="my-data-bucket" />
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Object key (CSV path)</label>
+                <input className={inputCls} value={s3.key} onChange={(e) => setS3Field('key', e.target.value)} placeholder="data/exports/customers.csv" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-small text-text-light block mb-1">Access key ID</label>
+                  <input className={inputCls} value={s3.accessKeyId} onChange={(e) => setS3Field('accessKeyId', e.target.value)} placeholder="AKIA..." />
+                </div>
+                <div>
+                  <label className="text-small text-text-light block mb-1">Secret access key</label>
+                  <input type="password" className={inputCls} value={s3.secretAccessKey} onChange={(e) => setS3Field('secretAccessKey', e.target.value)} placeholder="••••••••" />
+                </div>
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Region</label>
+                <input className={inputCls} value={s3.region} onChange={(e) => setS3Field('region', e.target.value)} placeholder="us-east-1" />
+              </div>
+              <p className="text-small text-text-light">Credentials are used once to read the CSV — they are not stored.</p>
+              <Button
+                variant="secondary"
+                onClick={autofillWithAI}
+                disabled={analyzing || !s3.bucket || !s3.key || !s3.accessKeyId || !s3.secretAccessKey}
+                className="w-full"
+              >
+                {analyzing ? 'Analyzing…' : 'Autofill with AI'}
+              </Button>
+            </div>
+          )}
+
+          {sourceType === 'gcs' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-small text-text-light block mb-1">Bucket</label>
+                <input className={inputCls} value={gcs.bucket} onChange={(e) => setGcsField('bucket', e.target.value)} placeholder="my-data-bucket" />
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Object name (CSV path)</label>
+                <input className={inputCls} value={gcs.objectName} onChange={(e) => setGcsField('objectName', e.target.value)} placeholder="exports/customers.csv" />
+              </div>
+              <div>
+                <label className="text-small text-text-light block mb-1">Service account JSON</label>
+                <textarea
+                  className={`${inputCls} min-h-[80px] font-mono text-xs`}
+                  value={gcs.serviceAccountJson}
+                  onChange={(e) => setGcsField('serviceAccountJson', e.target.value)}
+                  placeholder='{"type":"service_account","project_id":"...","private_key":"..."}'
+                  rows={3}
+                />
+              </div>
+              <p className="text-small text-text-light">Credentials are used once to read the CSV — they are not stored.</p>
+              <Button
+                variant="secondary"
+                onClick={autofillWithAI}
+                disabled={analyzing || !gcs.bucket || !gcs.objectName || !gcs.serviceAccountJson}
+                className="w-full"
+              >
+                {analyzing ? 'Analyzing…' : 'Autofill with AI'}
+              </Button>
+            </div>
+          )}
+
           <div>
             <label htmlFor="dataset-name" className="text-small text-text-dark font-medium block mb-2">Dataset name</label>
             <div className="flex gap-2">
@@ -480,7 +727,7 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSubmit} className="flex-1" disabled={submitting}>
-            {submitting ? (sourceType === 'postgres' ? 'Connecting…' : 'Creating…') : 'Create data product'}
+            {submitting ? (sourceType === 'csv' ? 'Creating…' : 'Connecting…') : 'Create data product'}
           </Button>
         </div>
       </div>
