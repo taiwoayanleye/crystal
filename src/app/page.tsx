@@ -125,13 +125,12 @@ export default function HomePage() {
                 label: 'PostgreSQL',
                 desc: 'Relational',
                 logo: (
-                  <svg viewBox="0 0 100 100" className="w-8 h-8" fill="currentColor">
-                    <circle cx="50" cy="50" r="48" fill="#336791" opacity="0.1" />
-                    <g fill="#336791">
-                      <ellipse cx="50" cy="35" rx="12" ry="15" />
-                      <path d="M50 20 Q62 25 62 40 Q62 55 50 60 Q38 55 38 40 Q38 25 50 20 M45 40 Q45 45 50 45 Q55 45 55 40 Q55 35 50 35 Q45 35 45 40" />
-                      <circle cx="30" cy="60" r="6" />
-                      <circle cx="70" cy="60" r="6" />
+                  <svg viewBox="0 0 256 256" className="w-8 h-8">
+                    <g fill="none">
+                      <circle cx="128" cy="128" r="120" fill="#336791" opacity="0.15" />
+                      <path d="M128 40 C100 40 78 50 78 85 L78 170 C78 200 100 210 128 210 C156 210 178 200 178 170 L178 85 C178 50 156 40 128 40" fill="#336791" />
+                      <circle cx="128" cy="65" r="15" fill="#336791" />
+                      <path d="M110 100 Q128 80 146 100" stroke="#336791" strokeWidth="3" fill="none" />
                     </g>
                   </svg>
                 ),
@@ -140,9 +139,11 @@ export default function HomePage() {
                 label: 'Snowflake',
                 desc: 'Warehouse',
                 logo: (
-                  <svg viewBox="0 0 100 100" className="w-8 h-8" fill="currentColor">
-                    <circle cx="50" cy="50" r="48" fill="#29b5e8" opacity="0.1" />
-                    <path d="M50 10 L65 35 L60 35 L75 50 L60 50 L65 65 L50 90 L35 65 L40 65 L25 50 L40 50 L35 35 L50 10" fill="#29b5e8" strokeWidth="1" stroke="#29b5e8" />
+                  <svg viewBox="0 0 256 256" className="w-8 h-8">
+                    <g fill="none">
+                      <circle cx="128" cy="128" r="120" fill="#29b5e8" opacity="0.15" />
+                      <path d="M128 30 L180 80 L160 80 L210 128 L160 128 L180 180 L128 230 L76 180 L96 180 L46 128 L96 128 L76 80 L128 30" fill="#29b5e8" />
+                    </g>
                   </svg>
                 ),
               },
@@ -150,13 +151,12 @@ export default function HomePage() {
                 label: 'BigQuery',
                 desc: 'Google Cloud',
                 logo: (
-                  <svg viewBox="0 0 100 100" className="w-8 h-8" fill="currentColor">
-                    <circle cx="50" cy="50" r="48" fill="#1f73e8" opacity="0.1" />
-                    <rect x="35" y="30" width="30" height="40" fill="#1f73e8" rx="4" />
-                    <circle cx="42" cy="42" r="3" fill="white" />
-                    <circle cx="58" cy="42" r="3" fill="white" />
-                    <circle cx="42" cy="58" r="3" fill="white" />
-                    <circle cx="58" cy="58" r="3" fill="white" />
+                  <svg viewBox="0 0 256 256" className="w-8 h-8">
+                    <g fill="none">
+                      <circle cx="128" cy="128" r="120" fill="#1f73e8" opacity="0.15" />
+                      <path d="M70 80 L128 60 L186 80 L186 160 L128 180 L70 160 Z" fill="#4285f4" />
+                      <path d="M100 110 L128 100 L156 110 L156 150 L128 160 L100 150 Z" fill="white" opacity="0.3" />
+                    </g>
                   </svg>
                 ),
               },
@@ -164,10 +164,12 @@ export default function HomePage() {
                 label: 'S3',
                 desc: 'AWS Storage',
                 logo: (
-                  <svg viewBox="0 0 100 100" className="w-8 h-8" fill="currentColor">
-                    <circle cx="50" cy="50" r="48" fill="#ff9900" opacity="0.1" />
-                    <path d="M30 65 L50 30 L70 65 Z" fill="#ff9900" />
-                    <rect x="35" y="65" width="30" height="20" fill="#ff9900" rx="2" />
+                  <svg viewBox="0 0 256 256" className="w-8 h-8">
+                    <g fill="none">
+                      <circle cx="128" cy="128" r="120" fill="#ff9900" opacity="0.15" />
+                      <path d="M80 180 L128 60 L176 180 Z" fill="#ff9900" />
+                      <rect x="90" y="180" width="76" height="30" fill="#ff9900" rx="3" />
+                    </g>
                   </svg>
                 ),
               },
@@ -175,11 +177,13 @@ export default function HomePage() {
                 label: 'GCS',
                 desc: 'Cloud Storage',
                 logo: (
-                  <svg viewBox="0 0 100 100" className="w-8 h-8" fill="currentColor">
-                    <circle cx="50" cy="50" r="48" fill="#ea4335" opacity="0.1" />
-                    <path d="M50 25 L65 35 L65 60 Q65 70 50 75 Q35 70 35 60 L35 35 Z" fill="#4285f4" />
-                    <path d="M35 35 L50 25 L50 50 L35 60 Z" fill="#34a853" />
-                    <path d="M65 35 L50 25 L50 50 L65 60 Z" fill="#fbbc04" />
+                  <svg viewBox="0 0 256 256" className="w-8 h-8">
+                    <g fill="none">
+                      <circle cx="128" cy="128" r="120" fill="#ea4335" opacity="0.15" />
+                      <circle cx="100" cy="110" r="18" fill="#4285f4" />
+                      <circle cx="150" cy="110" r="18" fill="#fbbc04" />
+                      <path d="M125 160 Q128 170 128 180 Q128 190 125 200" stroke="#34a853" strokeWidth="8" fill="none" strokeLinecap="round" />
+                    </g>
                   </svg>
                 ),
               },
