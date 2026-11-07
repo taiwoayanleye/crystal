@@ -6,7 +6,7 @@
  * (metrics, storage, chat) stays source-agnostic.
  */
 
-export type SourceType = 'csv' | 'postgres'
+export type SourceType = 'csv' | 'postgres' | 'snowflake'
 
 export interface IngestResult {
   /** A human-readable name for the resulting dataset. */
