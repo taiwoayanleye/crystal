@@ -117,29 +117,41 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
     setAiError(null)
     setAnalyzing(true)
     try {
-      if (!file) throw new Error('Choose a CSV first')
-      const { headers, rows } = await parseCSV(file)
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schema: headers, sampleRows: rows.slice(0, 15), problemStatement }),
-      })
-      if (!res.ok) throw new Error('Could not analyze the data')
-      const analysis = await res.json()
-
-      // Fill the fields — a clean name + emoji, and problem/users when empty.
-      if (!nameEdited && analysis.name) setName(analysis.name)
-      if (analysis.icon) setIcon(analysis.icon)
-      if (!problemStatement.trim() && analysis.problemStatement) setProblemStatement(analysis.problemStatement)
-      if (!users.trim() && analysis.users) setUsers(analysis.users)
-
-      const metrics: Suggestion[] = Array.isArray(analysis.metrics) ? analysis.metrics : []
-      setSuggestions(metrics)
-      // Auto-select the suggested metrics (it's an autofill).
-      setSelectedMetrics((prev) => Array.from(new Set([...prev, ...metrics.map(metricLabel)])))
-      setAnalyzed(true)
-      if (!metrics.length && !analysis.problemStatement) {
-        setAiError('Could not derive suggestions from this file.')
+      if (sourceType === 'csv') {
+        if (!file) throw new Error('Choose a CSV first')
+        const { headers, rows } = await parseCSV(file)
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schema: headers, sampleRows: rows.slice(0, 15), problemStatement }),
+        })
+        if (!res.ok) throw new Error('Could not analyze the data')
+        const analysis = await res.json()
+        if (!nameEdited && analysis.name) setName(analysis.name)
+        if (analysis.icon) setIcon(analysis.icon)
+        if (!problemStatement.trim() && analysis.problemStatement) setProblemStatement(analysis.problemStatement)
+        if (!users.trim() && analysis.users) setUsers(analysis.users)
+        const metrics: Suggestion[] = Array.isArray(analysis.metrics) ? analysis.metrics : []
+        setSuggestions(metrics)
+        setSelectedMetrics((prev) => Array.from(new Set([...prev, ...metrics.map(metricLabel)])))
+        setAnalyzed(true)
+      } else if (sourceType === 'postgres') {
+        const res = await fetch('/api/connect?analyze=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceType: 'postgres', connection: pg, problemStatement }),
+        })
+        if (!res.ok) throw new Error('Could not analyze the data')
+        const { suggestions: sug } = await res.json()
+        if (sug) {
+          if (!nameEdited && sug.name) setName(sug.name)
+          if (sug.icon) setIcon(sug.icon)
+          if (!problemStatement.trim() && sug.problemStatement) setProblemStatement(sug.problemStatement)
+          if (!users.trim() && sug.users) setUsers(sug.users)
+          const metricNames = Array.isArray(sug.metrics) ? sug.metrics : []
+          setSelectedMetrics((prev) => Array.from(new Set([...prev, ...metricNames])))
+        }
+        setAnalyzed(true)
       }
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Analysis failed')
@@ -359,6 +371,14 @@ export function UploadModal({ isOpen, onClose, onSubmit }: UploadModalProps) {
                 <span className="text-small text-text-dark">Require SSL (recommended for hosted Postgres)</span>
               </label>
               <p className="text-small text-text-light">Credentials are used once to read schema and a sample — they are not stored.</p>
+              <Button
+                variant="secondary"
+                onClick={autofillWithAI}
+                disabled={analyzing || !pg.host || !pg.database || !pg.user || !pg.password || !pg.table}
+                className="w-full"
+              >
+                {analyzing ? 'Analyzing…' : '✨ Autofill with AI'}
+              </Button>
             </div>
           )}
 
