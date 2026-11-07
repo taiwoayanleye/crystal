@@ -4,7 +4,7 @@
 
 Both Codex and Claude Code must read this file with `AGENTS.md` before significant work. Update it after a significant task with evidence only: what changed, validation run, unresolved issues, and the next best step. Preserve other agents' in-progress notes.
 
-_Last updated: 2026-11-06 by Codex (implemented the V2 interface from the Pencil source)._
+_Last updated: 2026-11-07 by Claude Code (completed Phase 2 connector implementations: Snowflake TAI-22 and BigQuery TAI-23)._
 
 ## Handoff snapshot
 
@@ -125,10 +125,11 @@ Historical validation when the AI upload flow was introduced: `npx tsc --noEmit`
 
 ## Outstanding work
 
+- **TAI-22 & TAI-23 complete:** Both Snowflake and BigQuery connectors are now implemented, tested, and marked Done in Linear.
 - Enable "Autofill with AI" for **PostgreSQL** sources (needs a sample fetched after connecting; currently CSV-only — AI button hidden for Postgres).
 - Review the TAI-25/TAI-26 implementation against Linear acceptance details. Real usage/trend telemetry remains outstanding; current usage/trend values are illustrative and outcome tracking remains manual.
 - Replace illustrative usage/trend with real signals (wire usage to actual query activity; derive freshness from upload time).
-- Phase 2 remaining connectors: Snowflake (TAI-22), BigQuery (TAI-23), cloud storage (TAI-27), plus backlog connectors and features.
+- Phase 2 remaining connectors: cloud storage (TAI-27: S3/GCS), plus backlog connectors and features.
 - Add integration/API tests + CI; confirm model id and env config in all environments.
 - Reconcile historical planning docs (Express/SQLite/Vite/Python mentions) with the actual Next.js/Neon architecture.
 - TAI-20 outreach is drafted on the Linear issue but must be **sent by a human** — not an agent action.
@@ -177,10 +178,50 @@ Implemented source-agnostic quality/usage/trend metrics, unblocking Phase 2 conn
 
 **Impact:** Phase 2 connectors (Snowflake, BigQuery, S3/GCS) can now be implemented without metric calculation changes.
 
+## Completed — Phase 2 connectors: Snowflake (TAI-22) and BigQuery (TAI-23) (2026-11-07)
+
+Implemented two enterprise data warehouse connectors following the unified `IDataConnector` pattern.
+
+**Snowflake connector (`src/lib/connectors/snowflake.ts`):**
+- Configuration: `accountId`, `user`, `password`, `warehouse`, `database`, `schema`, `table`
+- Snapshot ingestion via Snowflake REST API (information_schema queries)
+- Schema detection, row count, and sample data fetching
+- Base64 Basic Auth header for REST API calls
+- Integrated with `/api/connect` route for CSV-like UX
+
+**BigQuery connector (`src/lib/connectors/bigquery.ts`):**
+- Configuration: `projectId`, `datasetId`, `tableId`, `serviceAccountJson`
+- Google Cloud OAuth2 JWT authentication (service account key exchange)
+- Access token caching to avoid repeated auth requests
+- Schema from BigQuery metadata API; row count & sample via SQL queries
+- REST API integration to BigQuery query endpoint
+- Integrated with `/api/connect` route; validates all required fields
+
+**Updates across the codebase:**
+- `SourceType` union updated to include `'snowflake'` and `'bigquery'`
+- `Dataset` and `DatasetRow` types updated to reflect new source types
+- `insertDataset`, `saveDataset` accept new source types
+- Connector factory (`getConnector`) dispatches to new connector classes
+- `/api/connect` route accepts both Snowflake and BigQuery configurations with unified validation & ingestion
+
+**Validation:**
+- `npx tsc --noEmit` — no errors
+- `npm test` — 20/20 tests pass
+- `npm run build` — production build succeeds
+- Both commits: `48107b2` (Snowflake TAI-22) and `6d2e61c` (BigQuery TAI-23)
+
+**Technical approach:**
+- Snapshot-at-connect: credentials used once per ingest, never persisted
+- REST APIs chosen over SDKs to reduce dependency footprint
+- Follows existing connector pattern; inherits metrics calculation from TAI-26
+- Ready for live/scheduled sync workflows (TAI-32)
+
+**Marked as Done in Linear:** TAI-22 and TAI-23 now show `completedAt` timestamp.
+
 ## Next steps (product backlog)
 
-1. **Phase 2 connectors:** Start with Snowflake (TAI-22) or BigQuery (TAI-23)
-   - All use unified ingestion + metrics system now in place
+1. **Phase 2 connectors (remaining):** Cloud storage (TAI-27: S3/GCS)
+   - Follows the same unified ingestion + metrics system
 2. **Infrastructure:** Separate Neon dev database; add integration/API tests + CI
 3. **PostgreSQL AI autofill:** Enable "Autofill with AI" for database sources (TAI-26 prerequisite done)
 4. **Real signals:** Replace illustrative usage/trend when query logs available
