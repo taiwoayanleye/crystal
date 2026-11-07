@@ -68,20 +68,21 @@ export default function HomePage() {
         </nav>
       </header>
 
-      <section className="flex flex-1 flex-col items-center justify-center px-5 py-16 text-center sm:px-8 sm:py-20">
-        <div className="flex w-full max-w-4xl flex-col items-center gap-6 sm:gap-7">
+      {/* Hero Section */}
+      <section className="flex flex-col items-center justify-center px-5 py-16 text-center sm:px-8 sm:py-24">
+        <div className="flex w-full max-w-4xl flex-col items-center gap-6 sm:gap-8">
           <p className="font-mono text-[10px] font-medium tracking-[0.2em] text-text-secondary sm:text-xs">
             DATA-AS-A-PRODUCT PLATFORM
           </p>
           <h1 className="whitespace-pre-line font-heading text-[44px] font-bold leading-[1.02] tracking-[-0.045em] text-text-primary sm:text-6xl lg:text-[72px]">
-            {'Treat data like\na product.'}
+            {'Turn raw data\ninto products.'}
           </h1>
-          <p className="max-w-xl text-sm leading-6 text-text-secondary sm:text-lg sm:leading-7">
-            Quality signals. Outcome tracking. Source lineage.
-            <br className="hidden sm:block" /> One dashboard for every dataset your team ships.
+          <p className="max-w-2xl text-sm leading-6 text-text-secondary sm:text-lg sm:leading-7">
+            Connect any data source. Autofill with AI. Schedule refreshes. Track quality & outcomes.
+            <br className="hidden sm:block" /> One platform for teams that ship data.
           </p>
 
-          <div className="mt-1 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <div className="mt-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
             <Link href="/dashboard" className="inline-flex items-center justify-center gap-3 rounded-lg bg-accent px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-accent-light sm:px-7">
               Go to Dashboard <span aria-hidden="true">→</span>
             </Link>
@@ -90,7 +91,7 @@ export default function HomePage() {
             </a>
           </div>
 
-          <div aria-label="Portfolio snapshot" className="mt-7 flex w-full max-w-[600px] items-center justify-center divide-x divide-border-default border-t border-border-subtle pt-7 sm:mt-10 sm:pt-8">
+          <div aria-label="Portfolio snapshot" className="mt-8 flex w-full max-w-[600px] items-center justify-center divide-x divide-border-default border-t border-border-subtle pt-8 sm:mt-12 sm:pt-10">
             {stats.map((stat) => (
               <div key={stat.label} className="flex min-w-0 flex-1 flex-col items-center gap-1 px-3 sm:px-8">
                 <span className="font-mono text-xl font-semibold tabular-nums text-text-primary sm:text-[28px]">
@@ -100,6 +101,100 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Data Sources Section */}
+      <section className="border-t border-border-subtle bg-surface px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+        <div className="mx-auto max-w-4xl">
+          <div className="flex flex-col items-center gap-4 sm:gap-6 mb-12 sm:mb-16">
+            <p className="font-mono text-[10px] font-medium tracking-[0.2em] text-text-secondary sm:text-xs">
+              CONNECT ANYWHERE
+            </p>
+            <h2 className="font-heading text-3xl font-bold text-text-primary sm:text-4xl">
+              Your data, your platform
+            </h2>
+            <p className="max-w-xl text-sm text-text-secondary text-center sm:text-base">
+              Connect 5+ enterprise data sources. AI infers names, problem statements, and success metrics. Scheduled refreshes keep everything current.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 mb-12">
+            {[
+              { icon: '🐘', label: 'PostgreSQL', desc: 'Relational queries' },
+              { icon: '❄️', label: 'Snowflake', desc: 'Cloud warehouse' },
+              { icon: '☁️', label: 'BigQuery', desc: 'Google Cloud data' },
+              { icon: '🪣', label: 'S3', desc: 'AWS object storage' },
+              { icon: '☁️', label: 'GCS', desc: 'Google Cloud storage' },
+            ].map(({ icon, label, desc }) => (
+              <div key={label} className="flex flex-col items-center gap-2 p-4 rounded-lg bg-bg-base border border-border-subtle hover:border-border-default transition-colors">
+                <span className="text-2xl sm:text-3xl" aria-hidden="true">{icon}</span>
+                <span className="font-medium text-xs sm:text-sm text-center text-text-primary">{label}</span>
+                <span className="text-[10px] text-text-secondary text-center">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+        <div className="mx-auto max-w-4xl">
+          <div className="grid md:grid-cols-3 gap-8 sm:gap-12">
+            {[
+              {
+                icon: '✨',
+                title: 'AI Autofill',
+                description: 'Connect a source and Claude instantly generates a name, problem statement, and success metrics tailored to your data.',
+              },
+              {
+                icon: '⏰',
+                title: 'Scheduled Syncs',
+                description: 'Set a daily refresh time. Crystal keeps your datasets fresh without manual intervention. Full sync history included.',
+              },
+              {
+                icon: '📊',
+                title: 'Quality Signals',
+                description: 'Freshness, completeness, and accuracy scores updated on every sync. Track data product health in real time.',
+              },
+              {
+                icon: '🎯',
+                title: 'Outcome Tracking',
+                description: 'Document the business impact of each dataset. Record hypothesis, status, and measured outcomes as they evolve.',
+              },
+              {
+                icon: '📈',
+                title: 'Usage Insights',
+                description: 'See how your team is using each dataset. Adoption metrics help justify investment and improve data products.',
+              },
+              {
+                icon: '🔗',
+                title: 'Data Lineage',
+                description: 'Understand the path from source to dataset to decision. One-click links to schema, sample rows, and schemas.',
+              },
+            ].map(({ icon, title, description }) => (
+              <div key={title} className="flex flex-col gap-3">
+                <span className="text-3xl" aria-hidden="true">{icon}</span>
+                <h3 className="font-heading text-lg font-semibold text-text-primary">{title}</h3>
+                <p className="text-sm text-text-secondary leading-6">{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="border-t border-border-subtle bg-surface px-5 py-16 sm:px-8 sm:py-20 lg:px-12">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="font-heading text-3xl font-bold text-text-primary sm:text-4xl mb-4">
+            Ready to ship data products?
+          </h2>
+          <p className="text-text-secondary mb-8">
+            Start with CSV. Scale to enterprise data warehouses. Crystal grows with your data maturity.
+          </p>
+          <Link href="/dashboard" className="inline-flex items-center justify-center gap-3 rounded-lg bg-accent px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-accent-light">
+            Open Dashboard <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </section>
     </main>
