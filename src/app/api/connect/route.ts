@@ -3,13 +3,15 @@ import { getConnector } from '@/lib/connectors'
 import { PostgresConfig } from '@/lib/connectors/postgres'
 import { SnowflakeConfig } from '@/lib/connectors/snowflake'
 import { BigQueryConfig } from '@/lib/connectors/bigquery'
+import { S3Config } from '@/lib/connectors/s3'
+import { GCSConfig } from '@/lib/connectors/gcs'
 import { saveIngestResult } from '@/lib/ingestion'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/connect
- * Ingest a non-file data source (Phase 2). Supports PostgreSQL, Snowflake, and BigQuery.
+ * Ingest a non-file data source (Phase 2). Supports PostgreSQL, Snowflake, BigQuery, S3, and GCS.
  * Snapshot-at-connect: reads schema + a sample, computes quality, persists a
  * dataset. Connection credentials are used only for this request, never stored.
  */
@@ -120,9 +122,77 @@ export async function POST(request: NextRequest) {
         },
         { status: 201 }
       )
+    } else if (sourceType === 's3') {
+      const cfg = connection as S3Config
+      for (const field of ['bucket', 'key', 'accessKeyId', 'secretAccessKey'] as const) {
+        if (!cfg?.[field]) {
+          return NextResponse.json({ error: `Missing connection field: ${field}` }, { status: 400 })
+        }
+      }
+
+      const connector = getConnector('s3', cfg)
+      const result = await connector.ingest(500)
+      if (result.schema.length === 0) {
+        return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
+      }
+
+      const { datasetId } = await saveIngestResult({
+        result,
+        sourceType: connector.sourceType,
+        name: typeof name === 'string' ? name : undefined,
+        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
+        problemStatement: problemStatement || `S3 file: ${result.name}`,
+        users: users || 'Data team',
+        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          datasetId,
+          rowCount: result.rowCount,
+          columnCount: result.schema.length,
+          schema: result.schema,
+        },
+        { status: 201 }
+      )
+    } else if (sourceType === 'gcs') {
+      const cfg = connection as GCSConfig
+      for (const field of ['bucket', 'objectName', 'serviceAccountJson'] as const) {
+        if (!cfg?.[field]) {
+          return NextResponse.json({ error: `Missing connection field: ${field}` }, { status: 400 })
+        }
+      }
+
+      const connector = getConnector('gcs', cfg)
+      const result = await connector.ingest(500)
+      if (result.schema.length === 0) {
+        return NextResponse.json({ error: 'Source has no columns' }, { status: 400 })
+      }
+
+      const { datasetId } = await saveIngestResult({
+        result,
+        sourceType: connector.sourceType,
+        name: typeof name === 'string' ? name : undefined,
+        icon: typeof icon === 'string' ? icon.trim() || undefined : undefined,
+        problemStatement: problemStatement || `GCS file: ${result.name}`,
+        users: users || 'Data team',
+        successMetrics: Array.isArray(successMetrics) ? successMetrics : [],
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          datasetId,
+          rowCount: result.rowCount,
+          columnCount: result.schema.length,
+          schema: result.schema,
+        },
+        { status: 201 }
+      )
     } else {
       return NextResponse.json(
-        { error: `Unsupported source type: ${sourceType}. Supported: postgres, snowflake, bigquery` },
+        { error: `Unsupported source type: ${sourceType}. Supported: postgres, snowflake, bigquery, s3, gcs` },
         { status: 400 }
       )
     }

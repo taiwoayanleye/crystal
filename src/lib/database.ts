@@ -19,7 +19,7 @@ interface DatasetRow {
   id: string
   name: string
   icon: string
-  source_type: 'csv' | 'postgres' | 'snowflake' | 'bigquery'
+  source_type: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   success_metrics: string[]
   problem_statement: string
   users: string
@@ -103,7 +103,7 @@ async function insertDataset(d: {
   id: string
   name: string
   icon?: string
-  sourceType?: 'csv' | 'postgres' | 'snowflake' | 'bigquery'
+  sourceType?: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   successMetrics?: string[]
   problemStatement: string
   users: string
@@ -234,7 +234,7 @@ function toWithMetrics(r: DatasetRow): DatasetWithMetrics {
 export async function saveDataset(input: {
   name: string
   icon?: string
-  sourceType?: 'csv' | 'postgres' | 'snowflake' | 'bigquery'
+  sourceType?: 'csv' | 'postgres' | 'snowflake' | 'bigquery' | 's3' | 'gcs'
   lastSyncAt?: string
   successMetrics?: string[]
   problemStatement: string
